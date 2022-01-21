@@ -1,0 +1,11 @@
+{
+  "configurations": [
+    {
+      "name": "Tesou! Front End (Flutter)",
+      "program": "lib/main.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--web-port", "8001"]
+    }
+  ]
+}
