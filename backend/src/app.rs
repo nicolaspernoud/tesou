@@ -1,9 +1,10 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use actix_web::error::{self};
 use actix_web::{dev::ServiceRequest, Error};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use tokio::sync::Mutex;
 
 #[derive(Clone)]
 pub struct AppConfig {

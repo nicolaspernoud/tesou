@@ -48,7 +48,7 @@ class MyLocalizations {
       "settings": "Paramètres",
       "submit": "Valider",
       "surname": "Nom",
-      "tap_to_return_to_app": "Revenir à l'application.",
+      "tap_to_return_to_app": "Appuyez pour revenir à l'application.",
       "tesou_is_running": "Tesou! est en cours d'exécution.",
       "token": "Jeton de sécurité",
       "try_new_token": "Veuillez mettre à jour votre jeton de sécurité",

@@ -1,0 +1,20 @@
+{
+  "lat": 45.738545,
+  "lon": 4.851114,
+  "mcc": 208,
+  "mnc": 20,
+  "lac": 30026,
+  "cellid": 132014081,
+  "averageSignalStrength": 0,
+  "range": 500,
+  "samples": 1,
+  "changeable": 1,
+  "radio": "",
+  "rnc": 0,
+  "cid": 0,
+  "tac": 0,
+  "sid": 0,
+  "nid": 0,
+  "bid": 0,
+  "message": "This cell tower was not found in OpenCelliD. However, we served a location from the Unwired Labs LocationAPI (unwiredlabs.com), an Enterprise Geolocation service with over 100 million cell towers."
+}

@@ -105,7 +105,7 @@ pub async fn create(
     o: web::Json<NewPosition>,
     cfg: web::Data<AppConfig>,
 ) -> Result<HttpResponse, ServerError> {
-    let mut hm = cfg.user_last_update.lock().unwrap();
+    let mut hm = cfg.user_last_update.lock().await;
     check_close_timestamp!(hm, o);
     let conn = pool.get()?;
     let created_o = web::block::<_, _, diesel::result::Error>(move || {
@@ -204,7 +204,7 @@ pub async fn create_from_cid(
     cell_id: web::Json<CellId>,
     cfg: web::Data<AppConfig>,
 ) -> Result<HttpResponse, ServerError> {
-    let mut hm = cfg.user_last_update.lock().unwrap();
+    let mut hm = cfg.user_last_update.lock().await;
     let mut o = NewPosition {
         user_id: *uid,
         latitude: 0.0,
