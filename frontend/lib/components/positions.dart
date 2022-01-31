@@ -15,7 +15,7 @@ import 'package:tesou/globals.dart';
 import '../i18n.dart';
 import 'settings.dart';
 
-const defaultZoom = 16.0;
+const gpsSource = "GPS";
 
 class Positions extends StatefulWidget {
   final Crud crud;
@@ -164,7 +164,7 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                 options: MapOptions(
                                     center: LatLng(itms.elementAt(0).latitude,
                                         itms.elementAt(0).longitude),
-                                    zoom: defaultZoom,
+                                    zoom: zoom(itms.elementAt(0)),
                                     minZoom: 0,
                                     maxZoom: 18,
                                     enableScrollWheel: true,
@@ -175,7 +175,7 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        "${itms.elementAt(0).source} - ${formatTime(itms.elementAt(0).time)}",
+                                        formatTime(itms.elementAt(0).time),
                                         style: const TextStyle(
                                           fontSize: 22,
                                           color: Colors.black,
@@ -200,23 +200,55 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                       subdomains: ['a', 'b', 'c'],
                                     ),
                                   ),
-                                  MarkerLayerWidget(
-                                      options: MarkerLayerOptions(
-                                    markers: [
-                                      Marker(
-                                        width: 80.0,
-                                        height: 80.0,
-                                        point: LatLng(
-                                            itms.elementAt(0).latitude,
-                                            itms.elementAt(0).longitude),
-                                        builder: (ctx) => const Icon(
-                                          Icons.location_on,
-                                          color: Colors.green,
-                                          size: 40,
-                                        ),
-                                      ),
-                                    ],
-                                  )),
+                                  // If the last element comes from GPS, display a marker
+                                  itms.elementAt(0).source == gpsSource
+                                      ? MarkerLayerWidget(
+                                          options: MarkerLayerOptions(
+                                          markers: [
+                                            Marker(
+                                              width: 80.0,
+                                              height: 80.0,
+                                              point: LatLng(
+                                                  itms.elementAt(0).latitude,
+                                                  itms.elementAt(0).longitude),
+                                              builder: (ctx) => const Icon(
+                                                Icons.location_on,
+                                                color: Colors.blueAccent,
+                                                size: 40,
+                                              ),
+                                            ),
+                                          ],
+                                        ))
+                                      // else display a circle
+                                      : CircleLayerWidget(
+                                          options: CircleLayerOptions(circles: [
+                                          CircleMarker(
+                                              point: LatLng(
+                                                  itms.elementAt(0).latitude,
+                                                  itms.elementAt(0).longitude),
+                                              color:
+                                                  Colors.blue.withOpacity(0.3),
+                                              useRadiusInMeter: true,
+                                              radius: 1000 // 1 km
+                                              ),
+                                        ])),
+                                  // Draw a line with the last 10 positions coming from GPS
+                                  PolylineLayerWidget(
+                                    options: PolylineLayerOptions(
+                                      polylines: [
+                                        Polyline(
+                                            points: itms
+                                                .take(10)
+                                                .where((e) =>
+                                                    e.source == gpsSource)
+                                                .map((e) => LatLng(
+                                                    e.latitude, e.longitude))
+                                                .toList(),
+                                            strokeWidth: 4.0,
+                                            color: Colors.blueAccent),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -278,8 +310,15 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
     itms.sort((a, b) => b.time.compareTo(a.time));
     _animatedMapMove(
         LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
-        defaultZoom);
+        zoom(itms.elementAt(0)));
     setState(() {});
+  }
+
+  double zoom(Position position) {
+    if (position.source == gpsSource) {
+      return 16;
+    }
+    return 14;
   }
 }
 

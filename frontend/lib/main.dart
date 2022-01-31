@@ -16,7 +16,7 @@ import 'models/position.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-const updateRateMinutes = 10;
+const updateRateMinutes = 5;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

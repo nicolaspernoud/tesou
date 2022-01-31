@@ -30,6 +30,6 @@ Future<void> main() async {
     // Check that we display the user picker
     expect(find.text("John"), findsOneWidget);
     // Check that we diplay the last position info
-    expect(find.textContaining("GPS - 2022-01-19"), findsOneWidget);
+    expect(find.textContaining("2022-01-19"), findsOneWidget);
   });
 }
