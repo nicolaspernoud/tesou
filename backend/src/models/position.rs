@@ -33,6 +33,7 @@ pub struct Position {
     pub latitude: f64,
     pub longitude: f64,
     pub source: String,
+    pub battery_level: i32,
     pub time: i64,
 }
 
@@ -48,6 +49,7 @@ pub struct NewPosition {
     pub longitude: f64,
     #[serde(default = "default_source")]
     pub source: String,
+    pub battery_level: i32,
     #[serde(default = "now")]
     pub time: i64,
 }
@@ -171,6 +173,7 @@ pub struct CellId {
     pub lac: i32,
     pub lat: i64,
     pub long: i64,
+    pub battery_level: i32,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -211,6 +214,7 @@ pub async fn create_from_cid(
         longitude: 0.0,
         source: format!("Cell Id ({})", cell_id.network_type),
         time: now(),
+        battery_level: cell_id.battery_level,
     };
     check_close_timestamp!(hm, o);
     if cell_id.lat != -1 {

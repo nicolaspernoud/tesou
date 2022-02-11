@@ -2,6 +2,7 @@ package fr.ninico.aosp_location
 
 import android.content.Context
 import android.location.LocationManager
+import android.os.BatteryManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.telephony.CellIdentityCdma
@@ -57,7 +58,15 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
           context.getMainExecutor(),
           Consumer { location ->
             if (location == null) result.error(GPS_LOCATION_ERROR, "location is null", null)
-            else result.success("" + location.latitude + ":" + location.longitude)
+            else
+                result.success(
+                    "" +
+                        location.latitude +
+                        ":" +
+                        location.longitude +
+                        ":" +
+                        getBatteryLevel().toString()
+                )
           }
       )
     } catch (ex: Exception) {
@@ -134,7 +143,8 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
                           "cid": $cid,
                           "lac": $lac,
                           "lat": $lat,
-                          "long": $long
+                          "long": $long,
+                          "battery_level": ${getBatteryLevel().toString()}
                         }
                       """
                   result.success(CellInfoJson)
@@ -154,5 +164,10 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
     } else {
       result.error(CELL_INFO_ERROR, "android version not supported", null)
     }
+  }
+
+  private fun getBatteryLevel(): Int {
+    val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+    return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
   }
 }

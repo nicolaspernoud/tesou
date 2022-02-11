@@ -171,23 +171,31 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                     interactiveFlags: InteractiveFlag.all &
                                         ~InteractiveFlag.rotate),
                                 nonRotatedChildren: <Widget>[
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
-                                      Text(
-                                        formatTime(itms.elementAt(0).time),
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold,
-                                          shadows: [
-                                            Shadow(
-                                              blurRadius: 5.0,
-                                              color: Colors.blueGrey,
-                                              offset: Offset(1.0, 1.0),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 5, horizontal: 10),
+                                            decoration: BoxDecoration(
+                                                color: Colors.grey.shade50,
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                  top: Radius.circular(10),
+                                                )),
+                                            child: Text(
+                                              "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}%",
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.black,
+                                              ),
                                             ),
-                                          ],
-                                        ),
+                                          )
+                                        ],
                                       ),
                                     ],
                                   )
@@ -280,8 +288,11 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                   IconButton(
                       icon: const Icon(Icons.my_location),
                       onPressed: () async {
-                        await getPositionAndPushToServer();
-                        await _panMap();
+                        try {
+                          await getPositionAndPushToServer();
+                          await _panMap();
+                          // ignore: empty_catches
+                        } on Exception {}
                       }),
                 ],
                 IconButton(
@@ -305,13 +316,14 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
   }
 
   Future<void> _panMap() async {
-    positions = widget.crud.read("user_id=$_displayedUser");
+    setState(() {
+      positions = widget.crud.read("user_id=$_displayedUser");
+    });
     var itms = await positions;
     itms.sort((a, b) => b.time.compareTo(a.time));
     _animatedMapMove(
         LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
         zoom(itms.elementAt(0)));
-    setState(() {});
   }
 
   double zoom(Position position) {

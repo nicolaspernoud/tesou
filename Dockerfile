@@ -35,7 +35,7 @@ RUN chown -Rf "${UID}":"${UID}" /app/data/
 # Stage 2 : Frontend build #
 ############################
 
-FROM cirrusci/flutter:stable as frontend-builder
+FROM cirrusci/flutter:2.10.0 as frontend-builder
 WORKDIR /build
 COPY ./frontend .
 RUN flutter pub get

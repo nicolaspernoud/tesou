@@ -44,7 +44,7 @@ pub async fn position_test(
         app,
         Method::POST,
         "/api/positions",
-        r#"{"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS"}"#,
+        r#"{"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50}"#,
         StatusCode::NOT_FOUND,
         "Position not found"
     );
@@ -64,7 +64,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS"}}"#,
+            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50}}"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -77,7 +77,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS"}}"#,
+            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50}}"#,
             user_id
         ),
         StatusCode::CONFLICT,
@@ -92,7 +92,7 @@ pub async fn position_test(
         "",
         StatusCode::OK,
         format!(
-            r#"{{"id":{},"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","time":"#,
+            r#"{{"id":{},"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"time":"#,
             id, user_id
         )
     );
@@ -118,11 +118,12 @@ pub async fn position_test(
             latitude: 45.1911396,
             longitude: 5.7141747,
             source: "GPS".to_string(),
+            battery_level: 50,
             time: 0
         },
         StatusCode::OK,
         format!(
-            r#"{{"id":{},"user_id":{},"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","time":"#,
+            r#"{{"id":{},"user_id":{},"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","battery_level":50,"time":"#,
             id, user_id
         )
     );
@@ -153,7 +154,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":37.421998333333335,"longitude":-122.084,"source":"GPS","time":1642608103000}}"#,
+            r#"{{"user_id":{},"latitude":37.421998333333335,"longitude":-122.084,"source":"GPS","battery_level":50,"time":1642608103000}}"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -165,7 +166,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS"}}"#,
+            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50}}"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -178,7 +179,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.1911396,"longitude":5.7141747,"source":"GPS"}}"#,
+            r#"{{"user_id":{},"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","battery_level":50}}"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -192,7 +193,7 @@ pub async fn position_test(
         "",
         StatusCode::OK,
         format!(
-            r#"[{{"id":{},"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","time":"#,
+            r#"[{{"id":{},"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"time":"#,
             id1, user_id
         )
     );

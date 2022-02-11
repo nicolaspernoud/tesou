@@ -15,6 +15,7 @@ CREATE TABLE positions (
     latitude DOUBLE NOT NULL,
     longitude DOUBLE NOT NULL,
     source VARCHAR NOT NULL,
+    battery_level INTEGER NOT NULL,
     time INTEGER NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );

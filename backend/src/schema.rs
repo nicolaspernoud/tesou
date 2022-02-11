@@ -5,6 +5,7 @@ table! {
         latitude -> Double,
         longitude -> Double,
         source -> Text,
+        battery_level -> Integer,
         time -> BigInt,
     }
 }

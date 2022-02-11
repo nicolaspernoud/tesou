@@ -67,7 +67,7 @@ class APICrud<T extends Serialisable> extends Crud<T> {
   }
 
   @override
-  Future<T?> create(T val) async {
+  Future<dynamic> create(T val) async {
     try {
       final response = await client.post(
         Uri.parse('$base/$route'),

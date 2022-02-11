@@ -27,6 +27,7 @@ void main() {
         source: "GPS",
         time: DateTime.fromMillisecondsSinceEpoch(
             DateTime.now().millisecondsSinceEpoch),
+        batteryLevel: 50,
       );
       final a1Json = jsonEncode(i1.toJson());
       final i2 = Position.fromJson(json.decode(a1Json));

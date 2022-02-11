@@ -17,8 +17,10 @@ Future<void> getPositionAndPushToServer() async {
         userId: App().prefs.userId,
         latitude: double.parse(positions[0]),
         longitude: double.parse(positions[1]),
+        batteryLevel: int.parse(positions[2]),
         source: "GPS",
         time: DateTime.now()));
+    await App().log("Got position from GPS");
   } on HttpException catch (e) {
     await App().log(e.toString());
   } on Exception catch (e) {
@@ -38,6 +40,7 @@ Future<void> getPositionAndPushToServer() async {
       if (response.statusCode != 201) {
         throw Exception(response.body.toString());
       }
+      await App().log("Got position from Cell Id");
     } on Exception catch (e) {
       await App().log(e.toString());
     }

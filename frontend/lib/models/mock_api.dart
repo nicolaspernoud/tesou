@@ -8,8 +8,8 @@ class MockAPI {
       switch (request.url.toString()) {
         case '/api/positions?user_id=1':
           return Response('''
-              [{"id":1,"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS","time":1642620928123},
-              {"id":2,"user_id":1,"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","time":1642620928123}]
+              [{"id":1,"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"time":1642620928123},
+              {"id":2,"user_id":1,"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","battery_level":50,"time":1642620928123}]
               ''', 200);
         case '/api/users':
           return Response('''
