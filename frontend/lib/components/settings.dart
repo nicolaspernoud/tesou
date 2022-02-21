@@ -17,7 +17,7 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  String _logContent = App().getLog().join("\n");
+  late String _logContent;
   bool _logEnabled = App().prefs.logEnabled;
   late Future<List<User>> users;
   static const _url = 'https://github.com/nicolaspernoud/tesou/releases/latest';
@@ -25,6 +25,14 @@ class _SettingsState extends State<Settings> {
   void initState() {
     super.initState();
     users = widget.crud.read();
+    refreshLog();
+  }
+
+  refreshLog() async {
+    var lc = await App().getLog().join("\n");
+    setState(() {
+      _logContent = lc;
+    });
   }
 
   @override
@@ -125,8 +133,7 @@ class _SettingsState extends State<Settings> {
                               color: Colors.black,
                               onPressed: () {
                                 App().clearLog();
-                                _logContent = App().getLog().join("\n");
-                                setState(() {});
+                                refreshLog();
                               },
                             ),
                           if (_logEnabled)

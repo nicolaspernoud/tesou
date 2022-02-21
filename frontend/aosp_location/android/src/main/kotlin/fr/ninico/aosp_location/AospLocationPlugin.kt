@@ -1,10 +1,14 @@
 package fr.ninico.aosp_location
 
 import android.content.Context
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.BatteryManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
+import android.os.Handler
+import android.os.Looper
 import android.telephony.CellIdentityCdma
 import android.telephony.CellIdentityGsm
 import android.telephony.CellIdentityLte
@@ -19,10 +23,11 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import java.util.function.Consumer
+import java.util.Calendar
 
 const val CELL_INFO_ERROR = "CELL_INFO_ERROR"
 const val GPS_LOCATION_ERROR = "GPS_LOCATION_ERROR"
+const val GPS_TIMEOUT_MS = 30000L
 
 /** AospLocationPlugin */
 class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
@@ -52,8 +57,61 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
   private fun getPositionFromGPS(result: MethodChannel.Result) {
     try {
       val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
+      val location = locationManager!!.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+      if (location != null &&
+              location.getTime() > Calendar.getInstance().getTimeInMillis() - 2 * 60 * 1000
+      ) {
+        result.success(
+            "" + location.latitude + ":" + location.longitude + ":" + getBatteryLevel().toString()
+        )
+      } else {
+        var replied = false
+        val locationListener: LocationListener =
+            object : LocationListener {
+              override fun onLocationChanged(location: Location) {
+                locationManager.removeUpdates(this)
+                replied = true
+                result.success(
+                    "" +
+                        location.latitude +
+                        ":" +
+                        location.longitude +
+                        ":" +
+                        getBatteryLevel().toString()
+                )
+              }
+            }
+        val myLooper = Looper.myLooper()
+        locationManager.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER,
+            GPS_TIMEOUT_MS,
+            0f,
+            locationListener,
+            myLooper
+        )
+        if (myLooper != null) {
+          val myHandler = Handler(myLooper)
+          myHandler.postDelayed(
+              Runnable() {
+                run() {
+                  if (!replied) {
+                    locationManager.removeUpdates(locationListener)
+                    result.error(GPS_LOCATION_ERROR, "GPS Timeout", null)
+                  }
+                }
+              },
+              GPS_TIMEOUT_MS
+          )
+        }
+      }
+      ///////////////////////////////////
+      // TO BE TRIED WITH ANDROID 12+ //
+      /////////////////////////////////
+      /*val locationRequest =
+          LocationRequest.Builder(20000).setDurationMillis(GPS_TIMEOUT_MS).setMaxUpdates(1).build()
       locationManager!!.getCurrentLocation(
           LocationManager.GPS_PROVIDER,
+          locationRequest,
           null,
           context.getMainExecutor(),
           Consumer { location ->
@@ -68,7 +126,8 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
                         getBatteryLevel().toString()
                 )
           }
-      )
+      )*/
+      /////////////////////////////////
     } catch (ex: Exception) {
       result.error(GPS_LOCATION_ERROR, ex.message, null)
     }
