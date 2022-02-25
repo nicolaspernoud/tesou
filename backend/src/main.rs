@@ -12,6 +12,7 @@ use diesel::r2d2::{self, ConnectionManager};
 use crate::app::AppConfig;
 
 mod app;
+mod db_options;
 mod errors;
 mod models;
 mod schema;
@@ -37,6 +38,10 @@ async fn main() -> std::io::Result<()> {
     // set up database connection pool
     let manager = ConnectionManager::<SqliteConnection>::new("db/db.sqlite");
     let pool = r2d2::Pool::builder()
+        .connection_customizer(Box::new(db_options::ConnectionOptions {
+            enable_foreign_keys: false,
+            busy_timeout: Some(std::time::Duration::from_secs(30)),
+        }))
         .build(manager)
         .expect("failed to create pool.");
     embed_migrations!("db/migrations");
