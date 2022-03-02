@@ -110,7 +110,7 @@ pub async fn create(
     let mut hm = cfg.user_last_update.lock().await;
     check_close_timestamp!(hm, o);
     let conn = pool.get()?;
-    let created_o = web::block::<_, _, diesel::result::Error>(move || {
+    match web::block(move || {
         // Check that parent for our object exists
         crate::schema::users::dsl::users
             .find(o.user_id)
@@ -122,9 +122,20 @@ pub async fn create(
         let o = positions.order(id.desc()).first::<Position>(&conn)?;
         Ok(o)
     })
-    .await?;
-    update_last_timestamp!(hm, created_o);
-    Ok(HttpResponse::Created().json(created_o))
+    .await?
+    {
+        Ok(created_o) => {
+            update_last_timestamp!(hm, created_o);
+            Ok(HttpResponse::Created().json(created_o))
+        }
+        Err(e) => match e {
+            diesel::result::Error::DatabaseError(_, _) => {
+                Ok(HttpResponse::Conflict().body(format!("{}", e)))
+            }
+            diesel::result::Error::NotFound => Ok(HttpResponse::NotFound().body("Item not found")),
+            _ => Ok(HttpResponse::InternalServerError().body("")),
+        },
+    }
 }
 
 crud_read!(Position, positions);
@@ -141,7 +152,7 @@ pub async fn read_filter(
 ) -> Result<HttpResponse, ServerError> {
     let conn = pool.get()?;
     let params = web::Query::<Params>::from_query(req.query_string());
-    let object: Vec<Position>;
+    let object;
     match params {
         Ok(p) => {
             object = web::block(move || {
@@ -157,7 +168,12 @@ pub async fn read_filter(
             object = web::block(move || positions.order(id.asc()).load::<Position>(&conn)).await?;
         }
     }
-    Ok(HttpResponse::Ok().json(object))
+    if let Ok(object) = object {
+        Ok(HttpResponse::Ok().json(object))
+    } else {
+        let res = HttpResponse::NotFound().body(format!("No objects found"));
+        Ok(res)
+    }
 }
 
 crud_update!(Position, positions, User, users, user_id);
@@ -222,13 +238,13 @@ pub async fn create_from_cid(
         o.longitude = (cell_id.long / 2592000) as f64;
     } else {
         // Get the cell location from open Cell Id database
-        let ocid_resp = get_resp(&cell_id, &cfg.open_cell_id_api_key)?;
+        let ocid_resp = get_resp(&cell_id, &cfg.open_cell_id_api_key).await?;
         // Create position from those informations
         o.latitude = ocid_resp.lat;
         o.longitude = ocid_resp.lon;
     };
     let conn = pool.get()?;
-    let created_o = web::block::<_, _, diesel::result::Error>(move || {
+    match web::block(move || {
         // Check that parent for our object exists
         crate::schema::users::dsl::users
             .find(o.user_id)
@@ -240,12 +256,23 @@ pub async fn create_from_cid(
         let o = positions.order(id.desc()).first::<Position>(&conn)?;
         Ok(o)
     })
-    .await?;
-    update_last_timestamp!(hm, created_o);
-    Ok(HttpResponse::Created().json(created_o))
+    .await?
+    {
+        Ok(created_o) => {
+            update_last_timestamp!(hm, created_o);
+            Ok(HttpResponse::Created().json(created_o))
+        }
+        Err(e) => match e {
+            diesel::result::Error::DatabaseError(_, _) => {
+                Ok(HttpResponse::Conflict().body(format!("{}", e)))
+            }
+            diesel::result::Error::NotFound => Ok(HttpResponse::NotFound().body("Item not found")),
+            _ => Ok(HttpResponse::InternalServerError().body("")),
+        },
+    }
 }
 
-fn get_resp(cell_id: &CellId, api_key: &str) -> Result<OpenCellIdResponse, ServerError> {
+async fn get_resp(cell_id: &CellId, api_key: &str) -> Result<OpenCellIdResponse, ServerError> {
     // Request latitude and longitude from OpenCellId
     let url = format!(
         "https://opencellid.org/cell/get?key={}&mcc={}&mnc={}&lac={}&cellid={}&format=json",
@@ -255,9 +282,8 @@ fn get_resp(cell_id: &CellId, api_key: &str) -> Result<OpenCellIdResponse, Serve
         "Creating position from open cell id database with url {}",
         url
     );
-    // TODO : Upgrade to non blocking when upgrading to actix v4
-    match reqwest::blocking::get(url) {
-        Ok(res) => match res.json() {
+    match reqwest::get(url).await {
+        Ok(res) => match res.json().await {
             Ok(v) => Ok(v),
             Err(e) => Err(ServerError::Other(format!(
                 "Cell not found in Open Cell ID Database: {}",

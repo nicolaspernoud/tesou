@@ -32,7 +32,7 @@ pub async fn position_test(
     // Check that using the wrong token gives an unauthorized error
     let req = test::TestRequest::with_uri("/api/positions")
         .method(Method::GET)
-        .header("Authorization", "Bearer 0102")
+        .insert_header(("Authorization", "Bearer 0102"))
         .to_request();
     use actix_web::dev::Service;
     let resp = app.call(req).await;
@@ -46,7 +46,7 @@ pub async fn position_test(
         "/api/positions",
         r#"{"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50}"#,
         StatusCode::NOT_FOUND,
-        "Position not found"
+        "Item not found"
     );
 
     let user_id = do_test_extract_id!(
@@ -104,7 +104,7 @@ pub async fn position_test(
         &format!("/api/positions/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "Position not found"
+        "No object found with id:"
     );
 
     // Patch the position
@@ -145,7 +145,7 @@ pub async fn position_test(
         &format!("/api/positions/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "Position not found"
+        "No object found with id:"
     );
 
     // Create an old position

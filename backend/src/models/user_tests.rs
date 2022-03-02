@@ -14,7 +14,7 @@ pub async fn user_test(
 
     // Delete all the users
     let req = test::TestRequest::delete()
-        .header("Authorization", "Bearer 0101")
+        .insert_header(("Authorization", "Bearer 0101"))
         .uri("/api/users")
         .to_request();
     test::call_service(&mut app, req).await;
@@ -49,7 +49,7 @@ pub async fn user_test(
         &format!("/api/users/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "Position not found"
+        "No object found with id:"
     );
 
     // Patch the user
@@ -79,12 +79,12 @@ pub async fn user_test(
         &format!("/api/users/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "Position not found"
+        "No object found with id"
     );
 
     // Delete all the users
     let req = test::TestRequest::delete()
-        .header("Authorization", "Bearer 0101")
+        .insert_header(("Authorization", "Bearer 0101"))
         .uri("/api/users")
         .to_request();
     test::call_service(&mut app, req).await;
