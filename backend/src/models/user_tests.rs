@@ -49,7 +49,7 @@ pub async fn user_test(
         &format!("/api/users/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "No object found with id:"
+        "Item not found"
     );
 
     // Patch the user
@@ -79,7 +79,7 @@ pub async fn user_test(
         &format!("/api/users/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "No object found with id"
+        "Item not found"
     );
 
     // Delete all the users

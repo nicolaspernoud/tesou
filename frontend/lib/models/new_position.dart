@@ -10,7 +10,7 @@ Future<void> getPositionAndPushToServer() async {
   await App().init();
   await App().log("Getting position...");
   try {
-    final String position = await AospLocation.getPositionFromGPS;
+    final String position = await AospLocation.instance.getPositionFromGPS;
     final positions = position.split(":");
     await APICrud<Position>().create(Position(
         id: 0,
@@ -29,7 +29,7 @@ Future<void> getPositionAndPushToServer() async {
     var token = App().prefs.token;
     var client = http.Client();
     try {
-      final String cellInfoJson = await AospLocation.getCellInfo;
+      final String cellInfoJson = await AospLocation.instance.getCellInfo;
       final response =
           await client.post(Uri.parse('$base/${App().prefs.userId}'),
               headers: <String, String>{

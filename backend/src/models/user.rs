@@ -7,7 +7,7 @@ use crate::{
 
 macro_rules! trim {
     () => {
-        fn trim(mut self) -> Self {
+        fn trim(&mut self) -> &Self {
             self.name = self.name.trim().to_string();
             self.surname = self.surname.trim().to_string();
             self

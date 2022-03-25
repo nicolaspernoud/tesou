@@ -104,7 +104,7 @@ pub async fn position_test(
         &format!("/api/positions/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "No object found with id:"
+        "Item not found"
     );
 
     // Patch the position
@@ -145,7 +145,7 @@ pub async fn position_test(
         &format!("/api/positions/{}", id + 1),
         "",
         StatusCode::NOT_FOUND,
-        "No object found with id:"
+        "Item not found"
     );
 
     // Create an old position

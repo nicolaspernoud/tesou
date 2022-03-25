@@ -1,17 +1,23 @@
-import 'dart:async';
+import 'aosp_location_android.dart'
+    if (dart.library.js) 'aosp_location_web.dart';
 
-import 'package:flutter/services.dart';
+abstract class AospLocation {
+  static AospLocation? _instance;
 
-class AospLocation {
-  static const MethodChannel _channel = MethodChannel('aosp_location');
-
-  static Future<String> get getPositionFromGPS async {
-    final String version = await _channel.invokeMethod('getPositionFromGPS');
-    return version;
+  static AospLocation get instance {
+    _instance ??= getAospLocation();
+    return _instance as AospLocation;
   }
 
-  static Future<String> get getCellInfo async {
-    final String version = await _channel.invokeMethod('getCellInfo');
-    return version;
+  Future<String> get getCellInfo {
+    throw UnimplementedError();
   }
+
+  Future<String> get getPositionFromGPS {
+    throw UnimplementedError();
+  }
+}
+
+AospLocation getAospLocation() {
+  return getAospLocationProvider();
 }

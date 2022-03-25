@@ -8,7 +8,7 @@ use crate::{
 
 macro_rules! trim {
     () => {
-        fn trim(self) -> Self {
+        fn trim(&mut self) -> &Self {
             self
         }
     };

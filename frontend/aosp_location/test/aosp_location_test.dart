@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aosp_location/aosp_location.dart';
+import 'package:aosp_location/aosp_location_android.dart';
 
 void main() {
   const MethodChannel channel = MethodChannel('aosp_location');
@@ -18,7 +18,7 @@ void main() {
   });
 
   test('getPositionFromGPS and getCellInfo', () async {
-    expect(await AospLocation.getPositionFromGPS, '42');
-    expect(await AospLocation.getCellInfo, '42');
+    expect(await AospLocationAndroid().getPositionFromGPS, '42');
+    expect(await AospLocationAndroid().getCellInfo, '42');
   });
 }

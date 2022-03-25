@@ -111,37 +111,6 @@ class _SettingsState extends State<Settings> {
                               },
                             ),
                           ),
-                          Row(
-                            children: [
-                              Checkbox(
-                                onChanged: (bool? value) {
-                                  if (value != null) {
-                                    _logEnabled = value;
-                                    App().prefs.logEnabled = value;
-                                  }
-                                  setState(() {});
-                                },
-                                value: _logEnabled,
-                              ),
-                              Text(MyLocalizations.of(context)!
-                                  .tr("enable_log")),
-                            ],
-                          ),
-                          if (_logEnabled)
-                            IconButton(
-                              icon: const Icon(Icons.clear),
-                              color: Colors.black,
-                              onPressed: () {
-                                App().clearLog();
-                                refreshLog();
-                              },
-                            ),
-                          if (_logEnabled)
-                            TextFormField(
-                              key: Key(_logContent),
-                              initialValue: _logContent,
-                              maxLines: null,
-                            )
                         ],
                       );
                     } else if (snapshot.hasError) {
@@ -150,7 +119,37 @@ class _SettingsState extends State<Settings> {
                     // By default, show a loading spinner.
                     return const Center(child: CircularProgressIndicator());
                   },
-                )
+                ),
+                Row(
+                  children: [
+                    Checkbox(
+                      onChanged: (bool? value) {
+                        if (value != null) {
+                          _logEnabled = value;
+                          App().prefs.logEnabled = value;
+                        }
+                        setState(() {});
+                      },
+                      value: _logEnabled,
+                    ),
+                    Text(MyLocalizations.of(context)!.tr("enable_log")),
+                  ],
+                ),
+                if (_logEnabled)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    color: Colors.black,
+                    onPressed: () {
+                      App().clearLog();
+                      refreshLog();
+                    },
+                  ),
+                if (_logEnabled)
+                  TextFormField(
+                    key: Key(_logContent),
+                    initialValue: _logContent,
+                    maxLines: null,
+                  )
               ],
             ],
           ),
