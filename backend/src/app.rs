@@ -1,16 +1,14 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use actix_web::error::{self};
 use actix_web::{dev::ServiceRequest, Error};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use tokio::sync::Mutex;
 
-#[derive(Clone)]
 pub struct AppConfig {
     pub bearer_token: String,
     pub open_cell_id_api_key: String,
-    pub user_last_update: Arc<Mutex<HashMap<i32, i64>>>,
+    pub user_last_update: Mutex<HashMap<i32, i64>>,
 }
 
 impl AppConfig {
@@ -18,7 +16,7 @@ impl AppConfig {
         AppConfig {
             bearer_token: token,
             open_cell_id_api_key: api_key,
-            user_last_update: Arc::new(Mutex::new(HashMap::new())),
+            user_last_update: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -39,7 +37,7 @@ pub async fn validator(
 
 #[macro_export]
 macro_rules! create_app {
-    ($pool:expr, $app_config:expr) => {{
+    ($pool:expr, $app_data:expr) => {{
         use crate::models::{position, user};
         use actix_cors::Cors;
         use actix_web::{error, middleware, web, web::Data, App, HttpResponse};
@@ -55,7 +53,7 @@ macro_rules! create_app {
                             .into()
                     }),
             )
-            .app_data(web::Data::new($app_config))
+            .app_data(Data::clone($app_data))
             .wrap(Cors::permissive())
             .wrap(middleware::Logger::default())
             .service(

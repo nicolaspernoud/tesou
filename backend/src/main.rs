@@ -5,6 +5,7 @@ extern crate diesel_migrations;
 
 use std::env;
 
+use actix_web::web::Data;
 use actix_web::HttpServer;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -60,11 +61,12 @@ async fn main() -> std::io::Result<()> {
         }),
         env::var("API_KEY").expect("Open Cell ID API Key not found"),
     );
-
+    // Data should be constructed outside the HttpServer::new closure if shared, potentially mutable state is desired...
+    let app_data = Data::new(app_config);
     let bind = "0.0.0.0:8080";
 
     // Start HTTP server
-    HttpServer::new(move || create_app!(pool, app_config.clone()))
+    HttpServer::new(move || create_app!(pool, &app_data))
         .bind(&bind)?
         .run()
         .await
