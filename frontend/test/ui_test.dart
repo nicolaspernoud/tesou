@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tesou/components/home.dart';
 import 'package:tesou/globals.dart';
 import 'package:tesou/i18n.dart';
-import 'package:tesou/main.dart';
+import 'package:tesou/models/crud.dart';
+import 'package:tesou/models/position.dart';
+import 'package:tesou/models/user.dart';
+
+Future<void> _startForegroundTask(int updateRateMinutes) async {}
 
 Future<void> main() async {
   testWidgets('Basic app opening tests', (WidgetTester tester) async {
     // Initialize configuration
     await App().init();
     // Build our app and trigger a frame
+
+    var positionCrud = APICrud<Position>();
+    var userCrud = APICrud<User>();
     await tester.pumpWidget(
-      const MaterialApp(
-        home: MyHomePage(title: 'Tesou!'),
-        localizationsDelegates: [
+      MaterialApp(
+        home: Home(
+          crud: positionCrud,
+          title: 'Tesou!',
+          usersCrud: userCrud,
+          foregroundTaskCommand: _startForegroundTask,
+        ),
+        localizationsDelegates: const [
           MyLocalizationsDelegate(),
         ],
       ),

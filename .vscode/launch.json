@@ -1,0 +1,32 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Tesou Back End (Cargo launch)",
+      "cargo": {
+        "args": ["build", "--manifest-path", "backend/Cargo.toml"]
+      },
+      "program": "${cargo:program}",
+      "args": [],
+      "env": {
+        "TOKEN": "token",
+        "RUST_LOG": "debug",
+        "API_KEY": "***"
+      },
+      "cwd": "${workspaceRoot}/backend"
+    },
+    {
+      "name": "Tesou Front End (Flutter)",
+      "program": "lib/main.dart",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--web-port", "8001"],
+      "cwd": "${workspaceRoot}/frontend"
+    }
+  ]
+}

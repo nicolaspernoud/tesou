@@ -17,7 +17,7 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  late String _logContent;
+  late String _logContent = "";
   bool _logEnabled = App().prefs.logEnabled;
   late Future<List<User>> users;
   static const _url = 'https://github.com/nicolaspernoud/tesou/releases/latest';

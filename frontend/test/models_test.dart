@@ -20,15 +20,15 @@ void main() {
         'Converting a Position to json an retrieving it should give the same Position',
         () async {
       final Position i1 = Position(
-        id: 1,
-        userId: 1,
-        latitude: 45.74846,
-        longitude: 4.84671,
-        source: "GPS",
-        time: DateTime.fromMillisecondsSinceEpoch(
-            DateTime.now().millisecondsSinceEpoch),
-        batteryLevel: 50,
-      );
+          id: 1,
+          userId: 1,
+          latitude: 45.74846,
+          longitude: 4.84671,
+          source: "GPS",
+          time: DateTime.fromMillisecondsSinceEpoch(
+              DateTime.now().millisecondsSinceEpoch),
+          batteryLevel: 50,
+          isRunning: false);
       final a1Json = jsonEncode(i1.toJson());
       final i2 = Position.fromJson(json.decode(a1Json));
       expect(i1, i2);

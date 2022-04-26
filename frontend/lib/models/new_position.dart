@@ -6,7 +6,7 @@ import 'package:tesou/models/position.dart';
 import 'package:http/http.dart' as http;
 import 'package:aosp_location/aosp_location.dart';
 
-Future<void> getPositionAndPushToServer() async {
+Future<void> getPositionAndPushToServer(bool runningMode) async {
   await App().init();
   await App().log("Getting position...");
   try {
@@ -19,7 +19,8 @@ Future<void> getPositionAndPushToServer() async {
         longitude: double.parse(positions[1]),
         batteryLevel: int.parse(positions[2]),
         source: "GPS",
-        time: DateTime.now()));
+        time: DateTime.now(),
+        isRunning: runningMode));
     await App().log("Got position from GPS");
   } on HttpException catch (e) {
     await App().log(e.toString());

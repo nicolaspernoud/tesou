@@ -6,6 +6,7 @@ table! {
         longitude -> Double,
         source -> Text,
         battery_level -> Integer,
+        is_running -> Bool,
         time -> BigInt,
     }
 }

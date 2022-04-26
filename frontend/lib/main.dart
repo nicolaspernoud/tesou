@@ -9,14 +9,12 @@ import 'package:tesou/globals.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:tesou/models/new_position.dart';
 import 'package:tesou/models/user.dart';
-import 'components/positions.dart';
+import 'components/home.dart';
 import 'i18n.dart';
 import 'models/crud.dart';
 import 'models/position.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-const updateRateMinutes = 5;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,17 +33,24 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-void startCallback() {
-  FlutterForegroundTask.setTaskHandler(LocationTaskHandler());
+void walkingModeCallback() {
+  FlutterForegroundTask.setTaskHandler(LocationTaskHandler(runningMode: false));
+}
+
+void runningModeCallback() {
+  FlutterForegroundTask.setTaskHandler(LocationTaskHandler(runningMode: true));
 }
 
 class LocationTaskHandler extends TaskHandler {
+  final bool runningMode;
+
+  LocationTaskHandler({required this.runningMode});
   @override
   Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
 
   @override
   Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    await getPositionAndPushToServer();
+    await getPositionAndPushToServer(runningMode);
   }
 
   @override
@@ -63,8 +68,9 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   ReceivePort? _receivePort;
-
-  Future<void> _startForegroundTask() async {
+  Future<void> _startForegroundTask(bool runningMode) async {
+    _receivePort?.close();
+    await FlutterForegroundTask.stopService();
     await FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
           channelId: 'tesou',
@@ -79,30 +85,26 @@ class _MyAppState extends State<MyApp> {
         showNotification: true,
         playSound: false,
       ),
-      foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: updateRateMinutes * 60 * 1000,
+      foregroundTaskOptions: ForegroundTaskOptions(
+        interval: runningMode ? 20 * 1000 : 5 * 60 * 1000,
         autoRunOnBoot: true,
         allowWifiLock: false,
       ),
       printDevLog: false,
     );
     var locale = ui.window.locale;
-    if (await FlutterForegroundTask.isRunningService) {
-      _receivePort = await FlutterForegroundTask.restartService();
-    } else {
-      _receivePort = await FlutterForegroundTask.startService(
-        notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
-        notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
-        callback: startCallback,
-      );
-    }
+    _receivePort = await FlutterForegroundTask.startService(
+      notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
+      notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
+      callback: runningMode ? runningModeCallback : walkingModeCallback,
+    );
   }
 
   @override
   initState() {
     super.initState();
     if (!kIsWeb) {
-      _startForegroundTask();
+      _startForegroundTask(false);
     }
   }
 
@@ -112,12 +114,21 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
+  var positionCrud = APICrud<Position>();
+  var userCrud = APICrud<User>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tesou!',
       theme: ThemeData(primarySwatch: Colors.green),
-      home: const WithForegroundTask(child: MyHomePage(title: 'Tesou!')),
+      home: WithForegroundTask(
+          child: Home(
+        crud: positionCrud,
+        title: 'Tesou!',
+        usersCrud: userCrud,
+        foregroundTaskCommand: _startForegroundTask,
+      )),
       localizationsDelegates: const [
         MyLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
@@ -127,26 +138,6 @@ class _MyAppState extends State<MyApp> {
         Locale('en', ''),
         Locale('fr', ''),
       ],
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-  final String title;
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  var positionCrud = APICrud<Position>();
-  var userCrud = APICrud<User>();
-  @override
-  Widget build(BuildContext context) {
-    return Positions(
-      crud: positionCrud,
-      title: widget.title,
-      usersCrud: userCrud,
     );
   }
 }

@@ -59,7 +59,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
       val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
       val location = locationManager!!.getLastKnownLocation(LocationManager.GPS_PROVIDER)
       if (location != null &&
-              location.getTime() > Calendar.getInstance().getTimeInMillis() - 2 * 60 * 1000
+              location.getTime() > Calendar.getInstance().getTimeInMillis() - 10 * 1000
       ) {
         result.success(
             "" + location.latitude + ":" + location.longitude + ":" + getBatteryLevel().toString()

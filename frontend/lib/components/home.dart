@@ -17,28 +17,32 @@ import 'settings.dart';
 
 const gpsSource = "GPS";
 
-class Positions extends StatefulWidget {
+class Home extends StatefulWidget {
   final Crud crud;
   final Crud usersCrud;
 
   final String title;
 
-  const Positions(
+  final Function foregroundTaskCommand;
+
+  const Home(
       {Key? key,
       required this.crud,
       required this.usersCrud,
-      required this.title})
+      required this.title,
+      required this.foregroundTaskCommand})
       : super(key: key);
 
   @override
-  _PositionsState createState() => _PositionsState();
+  _HomeState createState() => _HomeState();
 }
 
-class _PositionsState extends State<Positions> with TickerProviderStateMixin {
+class _HomeState extends State<Home> with TickerProviderStateMixin {
   late Future<List<Position>> positions;
   late Future<List<User>> users;
   String _displayedUser = "1";
   late final MapController mapController;
+  bool _isRunningMode = false;
 
   @override
   void initState() {
@@ -187,13 +191,16 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                                     const BorderRadius.vertical(
                                                   top: Radius.circular(10),
                                                 )),
-                                            child: Text(
-                                              "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}%",
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                color: Colors.black,
-                                              ),
-                                            ),
+                                            child: _isRunningMode
+                                                ? Text(
+                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
+                                                : Text(
+                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}%",
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
                                           )
                                         ],
                                       ),
@@ -219,9 +226,11 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                               point: LatLng(
                                                   itms.elementAt(0).latitude,
                                                   itms.elementAt(0).longitude),
-                                              builder: (ctx) => const Icon(
+                                              builder: (ctx) => Icon(
                                                 Icons.location_on,
-                                                color: Colors.blueAccent,
+                                                color: _isRunningMode
+                                                    ? Colors.purpleAccent
+                                                    : Colors.blue,
                                                 size: 40,
                                               ),
                                             ),
@@ -246,7 +255,10 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                       polylines: [
                                         Polyline(
                                             points: itms
-                                                .take(10)
+                                                .where((e) => e.time.isAfter(
+                                                    DateTime.now().subtract(
+                                                        const Duration(
+                                                            hours: 6))))
                                                 .where((e) =>
                                                     e.source == gpsSource)
                                                 .map((e) => LatLng(
@@ -254,6 +266,17 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
                                                 .toList(),
                                             strokeWidth: 4.0,
                                             color: Colors.blueAccent),
+                                        Polyline(
+                                            points: itms
+                                                .takeWhile(
+                                                    (value) => value.isRunning)
+                                                .where((e) =>
+                                                    e.source == gpsSource)
+                                                .map((e) => LatLng(
+                                                    e.latitude, e.longitude))
+                                                .toList(),
+                                            strokeWidth: 4.0,
+                                            color: Colors.purpleAccent),
                                       ],
                                     ),
                                   ),
@@ -286,10 +309,24 @@ class _PositionsState extends State<Positions> with TickerProviderStateMixin {
               children: [
                 if (!kIsWeb) ...[
                   IconButton(
+                      icon: _isRunningMode
+                          ? const Icon(Icons.directions_run)
+                          : const Icon(Icons.directions_walk),
+                      onPressed: () async {
+                        if (_isRunningMode) {
+                          widget.foregroundTaskCommand(false);
+                        } else {
+                          widget.foregroundTaskCommand(true);
+                        }
+                        setState(() {
+                          _isRunningMode = !_isRunningMode;
+                        });
+                      }),
+                  IconButton(
                       icon: const Icon(Icons.my_location),
                       onPressed: () async {
                         try {
-                          await getPositionAndPushToServer();
+                          await getPositionAndPushToServer(false);
                           await _panMap();
                           // ignore: empty_catches
                         } on Exception {}

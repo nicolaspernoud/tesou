@@ -16,6 +16,7 @@ CREATE TABLE positions (
     longitude DOUBLE NOT NULL,
     source VARCHAR NOT NULL,
     battery_level INTEGER NOT NULL,
+    is_running BOOLEAN NOT NULL,
     time INTEGER NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
