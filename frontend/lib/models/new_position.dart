@@ -6,7 +6,7 @@ import 'package:tesou/models/position.dart';
 import 'package:http/http.dart' as http;
 import 'package:aosp_location/aosp_location.dart';
 
-Future<void> getPositionAndPushToServer(bool runningMode) async {
+Future<void> getPositionAndPushToServer(bool sportMode) async {
   await App().init();
   await App().log("Getting position...");
   try {
@@ -20,7 +20,7 @@ Future<void> getPositionAndPushToServer(bool runningMode) async {
         batteryLevel: int.parse(positions[2]),
         source: "GPS",
         time: DateTime.now(),
-        isRunning: runningMode));
+        sportMode: sportMode));
     await App().log("Got position from GPS");
   } on HttpException catch (e) {
     await App().log(e.toString());
@@ -45,5 +45,26 @@ Future<void> getPositionAndPushToServer(bool runningMode) async {
     } on Exception catch (e) {
       await App().log(e.toString());
     }
+  }
+}
+
+Future<Position?> createPositionFromStream(String event) async {
+  await App().init();
+  try {
+    final positions = event.split(":");
+    var pos = Position(
+        id: 0,
+        userId: App().prefs.userId,
+        latitude: double.parse(positions[0]),
+        longitude: double.parse(positions[1]),
+        batteryLevel: int.parse(positions[2]),
+        source: "GPS",
+        time: DateTime.now(),
+        sportMode: true);
+    await APICrud<Position>().create(pos);
+    return pos;
+  } catch (e) {
+    await App().log(e.toString());
+    return null;
   }
 }

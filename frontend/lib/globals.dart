@@ -5,6 +5,7 @@ import 'package:tesou/models/preferences.dart';
 
 class App {
   late Preferences prefs;
+  bool _initialized = false;
   App._privateConstructor();
 
   static final App _instance = App._privateConstructor();
@@ -18,6 +19,9 @@ class App {
   }
 
   log(String v) async {
+    if (!_initialized) {
+      await init();
+    }
     await prefs.addToLog(v);
   }
 
@@ -34,5 +38,6 @@ class App {
     if (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST')) {
       await prefs.read();
     }
+    _initialized = true;
   }
 }

@@ -16,6 +16,10 @@ abstract class AospLocation {
   Future<String> get getPositionFromGPS {
     throw UnimplementedError();
   }
+
+  Stream<String> get getPositionStream {
+    throw UnimplementedError();
+  }
 }
 
 AospLocation getAospLocation() {

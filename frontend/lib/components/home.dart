@@ -34,22 +34,22 @@ class Home extends StatefulWidget {
       : super(key: key);
 
   @override
-  _HomeState createState() => _HomeState();
+  HomeState createState() => HomeState();
 }
 
-class _HomeState extends State<Home> with TickerProviderStateMixin {
+class HomeState extends State<Home> with TickerProviderStateMixin {
   late Future<List<Position>> positions;
   late Future<List<User>> users;
-  String _displayedUser = "1";
+  String displayedUser = "1";
   late final MapController mapController;
-  bool _isRunningMode = false;
+  bool _sportMode = false;
 
   @override
   void initState() {
     super.initState();
     mapController = MapController();
     if (App().hasToken) {
-      positions = widget.crud.read("user_id=$_displayedUser");
+      positions = widget.crud.read("user_id=$displayedUser");
       users = widget.usersCrud.read();
     } else {
       WidgetsBinding.instance?.addPostFrameCallback(openSettings);
@@ -108,7 +108,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
 
   void hasTokenOrOpenSettings(_) {
     if (App().hasToken) {
-      positions = widget.crud.read("user_id=$_displayedUser");
+      positions = widget.crud.read("user_id=$displayedUser");
       users = widget.usersCrud.read();
     } else {
       openSettings(_);
@@ -191,7 +191,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                                                     const BorderRadius.vertical(
                                                   top: Radius.circular(10),
                                                 )),
-                                            child: _isRunningMode
+                                            child: _sportMode
                                                 ? Text(
                                                     "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
                                                 : Text(
@@ -226,11 +226,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                                               point: LatLng(
                                                   itms.elementAt(0).latitude,
                                                   itms.elementAt(0).longitude),
-                                              builder: (ctx) => Icon(
+                                              builder: (ctx) => const Icon(
                                                 Icons.location_on,
-                                                color: _isRunningMode
-                                                    ? Colors.purpleAccent
-                                                    : Colors.blue,
+                                                color: Colors.blue,
                                                 size: 40,
                                               ),
                                             ),
@@ -269,14 +267,14 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                                         Polyline(
                                             points: itms
                                                 .takeWhile(
-                                                    (value) => value.isRunning)
+                                                    (value) => value.sportMode)
                                                 .where((e) =>
                                                     e.source == gpsSource)
                                                 .map((e) => LatLng(
                                                     e.latitude, e.longitude))
                                                 .toList(),
                                             strokeWidth: 4.0,
-                                            color: Colors.purpleAccent),
+                                            color: Colors.pink),
                                       ],
                                     ),
                                   ),
@@ -309,40 +307,42 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
               children: [
                 if (!kIsWeb) ...[
                   IconButton(
-                      icon: _isRunningMode
-                          ? const Icon(Icons.directions_run)
+                      icon: _sportMode
+                          ? const CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.pink,
+                              child: Icon(Icons.directions_run,
+                                  color: Colors.white),
+                            )
                           : const Icon(Icons.directions_walk),
                       onPressed: () async {
-                        if (_isRunningMode) {
-                          widget.foregroundTaskCommand(false);
-                        } else {
-                          widget.foregroundTaskCommand(true);
-                        }
                         setState(() {
-                          _isRunningMode = !_isRunningMode;
+                          _sportMode = !_sportMode;
                         });
+                        widget.foregroundTaskCommand(_sportMode);
                       }),
-                  IconButton(
-                      icon: const Icon(Icons.my_location),
-                      onPressed: () async {
-                        try {
-                          await getPositionAndPushToServer(false);
-                          await _panMap();
-                          // ignore: empty_catches
-                        } on Exception {}
-                      }),
+                  if (!_sportMode)
+                    IconButton(
+                        icon: const Icon(Icons.my_location),
+                        onPressed: () async {
+                          try {
+                            await getPositionAndPushToServer(false);
+                            await panMap();
+                            // ignore: empty_catches
+                          } on Exception {}
+                        }),
                 ],
                 IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: () async {
-                      _panMap();
+                      panMap();
                     }),
                 if (App().hasToken)
                   UsersDropdown(
                     users: users,
                     callback: (val) {
-                      _displayedUser = val.toString();
-                      _panMap();
+                      displayedUser = val.toString();
+                      panMap();
                     },
                     initialIndex: 1,
                   ),
@@ -352,15 +352,17 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
         ));
   }
 
-  Future<void> _panMap() async {
+  Future<void> panMap() async {
     setState(() {
-      positions = widget.crud.read("user_id=$_displayedUser");
+      positions = widget.crud.read("user_id=$displayedUser");
     });
     var itms = await positions;
     itms.sort((a, b) => b.time.compareTo(a.time));
-    _animatedMapMove(
-        LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
-        zoom(itms.elementAt(0)));
+    if (itms.isNotEmpty) {
+      _animatedMapMove(
+          LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
+          zoom(itms.elementAt(0)));
+    }
   }
 
   double zoom(Position position) {

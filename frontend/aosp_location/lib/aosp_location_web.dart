@@ -26,4 +26,9 @@ class AospLocationWeb extends AospLocation {
   Future<String> get getCellInfo async {
     throw UnimplementedError();
   }
+
+  @override
+  Stream<String> get getPositionStream async* {
+    throw UnimplementedError();
+  }
 }

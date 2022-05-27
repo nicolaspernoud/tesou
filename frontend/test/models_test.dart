@@ -28,7 +28,7 @@ void main() {
           time: DateTime.fromMillisecondsSinceEpoch(
               DateTime.now().millisecondsSinceEpoch),
           batteryLevel: 50,
-          isRunning: false);
+          sportMode: false);
       final a1Json = jsonEncode(i1.toJson());
       final i2 = Position.fromJson(json.decode(a1Json));
       expect(i1, i2);

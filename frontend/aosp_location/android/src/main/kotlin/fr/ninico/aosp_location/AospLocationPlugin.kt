@@ -19,6 +19,8 @@ import android.telephony.CellInfo
 import android.telephony.TelephonyManager
 import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.EventChannel.StreamHandler
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -30,9 +32,37 @@ const val GPS_LOCATION_ERROR = "GPS_LOCATION_ERROR"
 const val GPS_TIMEOUT_MS = 30000L
 
 /** AospLocationPlugin */
-class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
+class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler {
   private lateinit var channel: MethodChannel
   private lateinit var context: Context
+  private var messageChannel: EventChannel? = null
+  private var eventSink: EventChannel.EventSink? = null
+  private lateinit var locationManager: LocationManager
+  val streamLocationListener: LocationListener =
+      object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+          eventSink?.success(
+              "" + location.latitude + ":" + location.longitude + ":" + getBatteryLevel().toString()
+          )
+        }
+      }
+
+  override fun onListen(arguments: Any?, eventSink: EventChannel.EventSink?) {
+    this.eventSink = eventSink
+    locationManager.requestLocationUpdates(
+        LocationManager.GPS_PROVIDER,
+        GPS_TIMEOUT_MS,
+        0f,
+        streamLocationListener,
+        Looper.myLooper()
+    )
+  }
+
+  override fun onCancel(arguments: Any?) {
+    eventSink = null
+    messageChannel = null
+    locationManager.removeUpdates(streamLocationListener)
+  }
 
   override fun onAttachedToEngine(
       @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
@@ -40,6 +70,10 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "aosp_location")
     channel.setMethodCallHandler(this)
     this.context = flutterPluginBinding.applicationContext
+
+    messageChannel = EventChannel(flutterPluginBinding.binaryMessenger, "aosp_location_stream")
+    messageChannel?.setStreamHandler(this)
+    this.locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -56,8 +90,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler {
 
   private fun getPositionFromGPS(result: MethodChannel.Result) {
     try {
-      val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
-      val location = locationManager!!.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+      val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
       if (location != null &&
               location.getTime() > Calendar.getInstance().getTimeInMillis() - 10 * 1000
       ) {

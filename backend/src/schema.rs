@@ -6,7 +6,7 @@ table! {
         longitude -> Double,
         source -> Text,
         battery_level -> Integer,
-        is_running -> Bool,
+        sport_mode -> Bool,
         time -> BigInt,
     }
 }

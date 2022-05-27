@@ -135,21 +135,33 @@ class _SettingsState extends State<Settings> {
                     Text(MyLocalizations.of(context)!.tr("enable_log")),
                   ],
                 ),
-                if (_logEnabled)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    color: Colors.black,
-                    onPressed: () {
-                      App().clearLog();
-                      refreshLog();
-                    },
+                if (_logEnabled) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        color: Colors.black,
+                        onPressed: () {
+                          App().clearLog();
+                          refreshLog();
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh_outlined),
+                        color: Colors.black,
+                        onPressed: () {
+                          refreshLog();
+                        },
+                      ),
+                    ],
                   ),
-                if (_logEnabled)
                   TextFormField(
                     key: Key(_logContent),
                     initialValue: _logContent,
                     maxLines: null,
                   )
+                ]
               ],
             ],
           ),

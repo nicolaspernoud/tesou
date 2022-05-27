@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'dart:ui' as ui;
 
+import 'package:aosp_location/aosp_location.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'dart:async';
@@ -33,28 +34,54 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-void walkingModeCallback() {
-  FlutterForegroundTask.setTaskHandler(LocationTaskHandler(runningMode: false));
+void normalModeCallback() {
+  FlutterForegroundTask.setTaskHandler(NormalTaskHandler());
 }
 
-void runningModeCallback() {
-  FlutterForegroundTask.setTaskHandler(LocationTaskHandler(runningMode: true));
+void sportModeCallback() {
+  FlutterForegroundTask.setTaskHandler(SportTaskHandler());
 }
 
-class LocationTaskHandler extends TaskHandler {
-  final bool runningMode;
-
-  LocationTaskHandler({required this.runningMode});
+class NormalTaskHandler extends TaskHandler {
+  NormalTaskHandler();
   @override
   Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
 
   @override
   Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    await getPositionAndPushToServer(runningMode);
+    await getPositionAndPushToServer(false);
   }
 
   @override
   Future<void> onDestroy(DateTime timestamp) async {
+    await FlutterForegroundTask.clearAllData();
+  }
+}
+
+class SportTaskHandler extends TaskHandler {
+  SportTaskHandler();
+  StreamSubscription<String>? _streamSubscription;
+
+  @override
+  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
+    await App().log("Starting positions stream...");
+    final positionStream = AospLocation.instance.getPositionStream;
+    _streamSubscription = positionStream.listen((event) async {
+      await App().log("Got position event from stream");
+      var pos = await createPositionFromStream(event);
+      await App().log("Got position from stream : $pos");
+      // Send data to the main isolate.
+      sendPort?.send(pos);
+      await App().log("Sent position to main isolate");
+    });
+  }
+
+  @override
+  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
+
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    await _streamSubscription?.cancel();
     await FlutterForegroundTask.clearAllData();
   }
 }
@@ -68,8 +95,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   ReceivePort? _receivePort;
-  Future<void> _startForegroundTask(bool runningMode) async {
-    _receivePort?.close();
+  Future<bool> _startForegroundTask(bool sportMode) async {
+    _closeReceivePort();
     await FlutterForegroundTask.stopService();
     await FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
@@ -86,18 +113,43 @@ class _MyAppState extends State<MyApp> {
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        interval: runningMode ? 20 * 1000 : 5 * 60 * 1000,
+        interval: sportMode ? 30 * 60 * 1000 : 5 * 60 * 1000,
         autoRunOnBoot: true,
         allowWifiLock: false,
       ),
       printDevLog: false,
     );
     var locale = ui.window.locale;
-    _receivePort = await FlutterForegroundTask.startService(
+    ReceivePort? receivePort;
+    receivePort = await FlutterForegroundTask.startService(
       notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
       notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
-      callback: runningMode ? runningModeCallback : walkingModeCallback,
+      callback: sportMode ? sportModeCallback : normalModeCallback,
     );
+
+    return _registerReceivePort(receivePort);
+  }
+
+  bool _registerReceivePort(ReceivePort? receivePort) {
+    _closeReceivePort();
+    if (receivePort != null) {
+      _receivePort = receivePort;
+      _receivePort?.listen((position) async {
+        await App()
+            .log('Received position from stream into main isolate : $position');
+        if (App().prefs.userId.toString() ==
+            _homeState.currentState!.displayedUser) {
+          await _homeState.currentState?.panMap();
+        }
+      });
+      return true;
+    }
+    return false;
+  }
+
+  void _closeReceivePort() {
+    _receivePort?.close();
+    _receivePort = null;
   }
 
   @override
@@ -117,6 +169,8 @@ class _MyAppState extends State<MyApp> {
   var positionCrud = APICrud<Position>();
   var userCrud = APICrud<User>();
 
+  final GlobalKey<HomeState> _homeState = GlobalKey<HomeState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -124,6 +178,7 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(primarySwatch: Colors.green),
       home: WithForegroundTask(
           child: Home(
+        key: _homeState,
         crud: positionCrud,
         title: 'Tesou!',
         usersCrud: userCrud,

@@ -11,7 +11,7 @@ class Position extends Serialisable with EquatableMixin {
   String source;
   DateTime time;
   int batteryLevel;
-  bool isRunning;
+  bool sportMode;
 
   Position(
       {required id,
@@ -20,7 +20,7 @@ class Position extends Serialisable with EquatableMixin {
       required this.longitude,
       required this.source,
       required this.batteryLevel,
-      required this.isRunning,
+      required this.sportMode,
       required this.time})
       : super(id: id);
 
@@ -33,7 +33,7 @@ class Position extends Serialisable with EquatableMixin {
       'longitude': longitude,
       'source': source,
       'battery_level': batteryLevel,
-      'is_running': isRunning,
+      'sport_mode': sportMode,
       'time': time.millisecondsSinceEpoch
     };
   }
@@ -46,7 +46,7 @@ class Position extends Serialisable with EquatableMixin {
         longitude: json['longitude'],
         source: json['source'],
         batteryLevel: json['battery_level'],
-        isRunning: json['is_running'],
+        sportMode: json['sport_mode'] ?? false,
         time: json['time'] != null
             ? DateTime.fromMillisecondsSinceEpoch(json['time'])
             : DateTime.now());
@@ -61,7 +61,7 @@ class Position extends Serialisable with EquatableMixin {
       longitude,
       source,
       batteryLevel,
-      isRunning,
+      sportMode,
       time
     ];
   }
@@ -72,7 +72,7 @@ class Position extends Serialisable with EquatableMixin {
 
 double lastRunDuration(List<Position> positions) {
   positions.sort((a, b) => b.time.compareTo(a.time));
-  var pos = positions.takeWhile((value) => value.isRunning);
+  var pos = positions.takeWhile((value) => value.sportMode);
   try {
     return pos.first.time.difference(pos.last.time).inSeconds / 3600;
   } catch (e) {
@@ -82,7 +82,7 @@ double lastRunDuration(List<Position> positions) {
 
 double lastRunDistance(List<Position> positions) {
   positions.sort((a, b) => b.time.compareTo(a.time));
-  var pos = positions.takeWhile((value) => value.isRunning);
+  var pos = positions.takeWhile((value) => value.sportMode);
   Position? previous;
   double acc = 0.0;
   for (var p in pos) {
