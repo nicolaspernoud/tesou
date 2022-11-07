@@ -53,7 +53,7 @@ class NormalTaskHandler extends TaskHandler {
   }
 
   @override
-  Future<void> onDestroy(DateTime timestamp) async {
+  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
     await FlutterForegroundTask.clearAllData();
   }
 }
@@ -80,7 +80,7 @@ class SportTaskHandler extends TaskHandler {
   Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
 
   @override
-  Future<void> onDestroy(DateTime timestamp) async {
+  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
     await _streamSubscription?.cancel();
     await FlutterForegroundTask.clearAllData();
   }
@@ -90,42 +90,44 @@ class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   ReceivePort? _receivePort;
   Future<bool> _startForegroundTask(bool sportMode) async {
     _closeReceivePort();
     await FlutterForegroundTask.stopService();
-    await FlutterForegroundTask.init(
-      androidNotificationOptions: AndroidNotificationOptions(
-          channelId: 'tesou',
-          channelName: 'tesou',
-          channelDescription: 'tesou location service',
-          iconData: const NotificationIconData(
-            resType: ResourceType.mipmap,
-            resPrefix: ResourcePrefix.ic,
-            name: 'notification',
-          )),
-      iosNotificationOptions: const IOSNotificationOptions(
-        showNotification: true,
-        playSound: false,
-      ),
-      foregroundTaskOptions: ForegroundTaskOptions(
-        interval: sportMode ? 30 * 60 * 1000 : 5 * 60 * 1000,
-        autoRunOnBoot: true,
-        allowWifiLock: false,
-      ),
-      printDevLog: false,
-    );
+    FlutterForegroundTask.init(
+        androidNotificationOptions: AndroidNotificationOptions(
+            channelId: 'tesou',
+            channelName: 'tesou',
+            channelDescription: 'tesou location service',
+            iconData: const NotificationIconData(
+              resType: ResourceType.mipmap,
+              resPrefix: ResourcePrefix.ic,
+              name: 'notification',
+            )),
+        iosNotificationOptions: const IOSNotificationOptions(
+          showNotification: true,
+          playSound: false,
+        ),
+        foregroundTaskOptions: ForegroundTaskOptions(
+          interval: sportMode ? 30 * 60 * 1000 : 5 * 60 * 1000,
+          autoRunOnBoot: true,
+          allowWifiLock: false,
+        ));
     var locale = ui.window.locale;
-    ReceivePort? receivePort;
-    receivePort = await FlutterForegroundTask.startService(
+    bool reqResult = await FlutterForegroundTask.startService(
       notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
       notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
       callback: sportMode ? sportModeCallback : normalModeCallback,
     );
+
+    ReceivePort? receivePort;
+    if (reqResult) {
+      receivePort = await FlutterForegroundTask.receivePort;
+    }
 
     return _registerReceivePort(receivePort);
   }

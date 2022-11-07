@@ -17,10 +17,10 @@ class UsersDropdown extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _UsersDropdownState createState() => _UsersDropdownState();
+  UsersDropdownState createState() => UsersDropdownState();
 }
 
-class _UsersDropdownState extends State<UsersDropdown> {
+class UsersDropdownState extends State<UsersDropdown> {
   late int _index;
 
   @override

@@ -24,14 +24,14 @@ impl AppConfig {
 pub async fn validator(
     req: ServiceRequest,
     credentials: BearerAuth,
-) -> Result<ServiceRequest, Error> {
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let app_config = req
         .app_data::<actix_web::web::Data<AppConfig>>()
         .expect("Could not get token configuration");
     if app_config.bearer_token == credentials.token() {
         Ok(req)
     } else {
-        Err(error::ErrorUnauthorized("Wrong token!"))
+        Err((error::ErrorUnauthorized("Wrong token!"), req))
     }
 }
 

@@ -12,10 +12,10 @@ class NewEditUser extends StatefulWidget {
       : super(key: key);
 
   @override
-  _NewEditUserState createState() => _NewEditUserState();
+  NewEditUserState createState() => NewEditUserState();
 }
 
-class _NewEditUserState extends State<NewEditUser> {
+class NewEditUserState extends State<NewEditUser> {
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -32,6 +32,7 @@ class _NewEditUserState extends State<NewEditUser> {
                       icon: const Icon(Icons.delete_forever),
                       onPressed: () async {
                         await widget.crud.delete(widget.user.id);
+                        if (!mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(MyLocalizations.of(context)!
@@ -112,6 +113,7 @@ class _NewEditUserState extends State<NewEditUser> {
                           } catch (e) {
                             msg = e.toString();
                           }
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(msg)),
                           );

@@ -35,9 +35,11 @@ pub async fn position_test(
         .insert_header(("Authorization", "Bearer 0102"))
         .to_request();
     use actix_web::dev::Service;
-    let resp = app.call(req).await;
-    assert!(resp.is_err());
-    assert!(resp.err().unwrap().to_string() == "Wrong token!");
+    let resp = app.call(req).await.unwrap();
+    assert_eq!(resp.status(), 401);
+    let body = test::read_body(resp).await;
+    let body = std::str::from_utf8(&body).unwrap().to_string();
+    assert_eq!(body, "Wrong token!");
 
     // Create a position with a non existing user
     do_test!(

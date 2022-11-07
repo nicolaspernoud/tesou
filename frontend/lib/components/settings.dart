@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:tesou/models/user.dart';
 import 'package:tesou/models/crud.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
-import 'package:url_launcher/url_launcher.dart';
-
 import 'package:tesou/globals.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import '../i18n.dart';
 import 'new_user.dart';
 
@@ -13,10 +12,10 @@ class Settings extends StatefulWidget {
   const Settings({Key? key, required this.crud}) : super(key: key);
 
   @override
-  _SettingsState createState() => _SettingsState();
+  SettingsState createState() => SettingsState();
 }
 
-class _SettingsState extends State<Settings> {
+class SettingsState extends State<Settings> {
   late String _logContent = "";
   bool _logEnabled = App().prefs.logEnabled;
   late Future<List<User>> users;
@@ -51,8 +50,8 @@ class _SettingsState extends State<Settings> {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: ElevatedButton(
                   onPressed: () async {
-                    await canLaunch(_url)
-                        ? await launch(_url)
+                    await canLaunchUrlString(_url)
+                        ? await launchUrlString(_url)
                         : throw 'Could not launch $_url';
                   },
                   child: Padding(

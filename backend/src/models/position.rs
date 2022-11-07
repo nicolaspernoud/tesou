@@ -25,8 +25,7 @@ macro_rules! trim {
     Identifiable,
     Associations,
 )]
-#[table_name = "positions"]
-#[belongs_to(User)]
+#[diesel(table_name = positions, belongs_to(User))]
 pub struct Position {
     pub id: i32,
     pub user_id: i32,
@@ -43,7 +42,7 @@ impl NewPosition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable)]
-#[table_name = "positions"]
+#[diesel(table_name = positions)]
 pub struct NewPosition {
     pub user_id: i32,
     pub latitude: f64,
@@ -99,7 +98,7 @@ macro_rules! delete_old_positions {
         // keep only the positions of the last 24 hours
         diesel::delete(positions)
             .filter(time.le(now() - 24 * 60 * 60 * 1000))
-            .execute(&$connection)?;
+            .execute(&mut $connection)?;
     };
 }
 
@@ -111,17 +110,17 @@ pub async fn create(
 ) -> Result<HttpResponse, ServerError> {
     let mut hm = cfg.user_last_update.lock().await;
     check_close_timestamp!(hm, o);
-    let conn = pool.get()?;
+    let mut conn = pool.get()?;
     match web::block(move || {
         // Check that parent for our object exists
         crate::schema::users::dsl::users
             .find(o.user_id)
-            .first::<User>(&conn)?;
+            .first::<User>(&mut conn)?;
         delete_old_positions!(conn);
         diesel::insert_into(positions)
             .values(o.clone().trim())
-            .execute(&conn)?;
-        let o = positions.order(id.desc()).first::<Position>(&conn)?;
+            .execute(&mut conn)?;
+        let o = positions.order(id.desc()).first::<Position>(&mut conn)?;
         Ok(o)
     })
     .await?
@@ -152,7 +151,7 @@ pub async fn read_filter(
     req: HttpRequest,
     pool: web::Data<DbPool>,
 ) -> Result<HttpResponse, ServerError> {
-    let conn = pool.get()?;
+    let mut conn = pool.get()?;
     let params = web::Query::<Params>::from_query(req.query_string());
     let object;
     match params {
@@ -161,13 +160,14 @@ pub async fn read_filter(
                 positions
                     .filter(user_id.eq(p.user_id))
                     .order(id.asc())
-                    .load::<Position>(&conn)
+                    .load::<Position>(&mut conn)
             })
             .await?;
         }
         Err(_) => {
-            let conn = pool.get()?;
-            object = web::block(move || positions.order(id.asc()).load::<Position>(&conn)).await?;
+            let mut conn = pool.get()?;
+            object =
+                web::block(move || positions.order(id.asc()).load::<Position>(&mut conn)).await?;
         }
     }
     if let Ok(object) = object {
@@ -246,17 +246,17 @@ pub async fn create_from_cid(
         o.latitude = ocid_resp.lat;
         o.longitude = ocid_resp.lon;
     };
-    let conn = pool.get()?;
+    let mut conn = pool.get()?;
     match web::block(move || {
         // Check that parent for our object exists
         crate::schema::users::dsl::users
             .find(o.user_id)
-            .first::<User>(&conn)?;
+            .first::<User>(&mut conn)?;
         delete_old_positions!(conn);
         diesel::insert_into(positions)
             .values(o.clone().trim())
-            .execute(&conn)?;
-        let o = positions.order(id.desc()).first::<Position>(&conn)?;
+            .execute(&mut conn)?;
+        let o = positions.order(id.desc()).first::<Position>(&mut conn)?;
         Ok(o)
     })
     .await?

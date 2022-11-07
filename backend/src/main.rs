@@ -9,6 +9,7 @@ use actix_web::web::Data;
 use actix_web::HttpServer;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 
 use crate::app::AppConfig;
 
@@ -45,12 +46,11 @@ async fn main() -> std::io::Result<()> {
         }))
         .build(manager)
         .expect("failed to create pool.");
-    embed_migrations!("db/migrations");
-    embedded_migrations::run_with_output(
-        &pool.get().expect("couldn't get db connection from pool"),
-        &mut std::io::stdout(),
-    )
-    .expect("couldn't run migrations");
+    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("db/migrations");
+    pool.get()
+        .expect("couldn't get db connection from pool")
+        .run_pending_migrations(MIGRATIONS)
+        .expect("couldn't run migrations");
 
     // Set up authorization token
     let app_config = AppConfig::new(

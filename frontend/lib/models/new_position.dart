@@ -26,7 +26,7 @@ Future<void> getPositionAndPushToServer(bool sportMode) async {
     await App().log(e.toString());
   } on Exception catch (e) {
     await App().log(e.toString());
-    var base = App().prefs.hostname + "/api/positions/cid";
+    var base = "${App().prefs.hostname}/api/positions/cid";
     var token = App().prefs.token;
     var client = http.Client();
     try {
@@ -35,7 +35,7 @@ Future<void> getPositionAndPushToServer(bool sportMode) async {
           await client.post(Uri.parse('$base/${App().prefs.userId}'),
               headers: <String, String>{
                 'Content-Type': 'application/json; charset=UTF-8',
-                'Authorization': "Bearer " + token
+                'Authorization': "Bearer $token"
               },
               body: cellInfoJson);
       if (response.statusCode != 201) {

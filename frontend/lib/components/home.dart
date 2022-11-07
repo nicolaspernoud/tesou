@@ -52,16 +52,16 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
       positions = widget.crud.read("user_id=$displayedUser");
       users = widget.usersCrud.read();
     } else {
-      WidgetsBinding.instance?.addPostFrameCallback(openSettings);
+      WidgetsBinding.instance.addPostFrameCallback(openSettings);
     }
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
-    final _latTween = Tween<double>(
+    final latTween = Tween<double>(
         begin: mapController.center.latitude, end: destLocation.latitude);
-    final _lngTween = Tween<double>(
+    final lngTween = Tween<double>(
         begin: mapController.center.longitude, end: destLocation.longitude);
-    final _zoomTween = Tween<double>(begin: mapController.zoom, end: destZoom);
+    final zoomTween = Tween<double>(begin: mapController.zoom, end: destZoom);
     var controller = AnimationController(
         duration: const Duration(milliseconds: 500), vsync: this);
     Animation<double> animation =
@@ -69,8 +69,8 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
 
     controller.addListener(() {
       mapController.move(
-          LatLng(_latTween.evaluate(animation), _lngTween.evaluate(animation)),
-          _zoomTween.evaluate(animation));
+          LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+          zoomTween.evaluate(animation));
     });
 
     animation.addStatusListener((status) {
@@ -90,8 +90,8 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
       builder: (BuildContext context) => AlertDialog(
         title: Text(MyLocalizations.of(context)!.tr("settings")),
         content: const SizedBox(
-          child: SettingsField(),
           height: 150,
+          child: SettingsField(),
         ),
         actions: <Widget>[
           TextButton(
@@ -207,18 +207,15 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                                     ],
                                   )
                                 ],
-                                children: <Widget>[
-                                  TileLayerWidget(
-                                    options: TileLayerOptions(
-                                      urlTemplate:
-                                          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                      subdomains: ['a', 'b', 'c'],
-                                    ),
+                                children: [
+                                  TileLayer(
+                                    urlTemplate:
+                                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                    subdomains: const ['a', 'b', 'c'],
                                   ),
                                   // If the last element comes from GPS, display a marker
                                   itms.elementAt(0).source == gpsSource
-                                      ? MarkerLayerWidget(
-                                          options: MarkerLayerOptions(
+                                      ? MarkerLayer(
                                           markers: [
                                             Marker(
                                               width: 80.0,
@@ -233,10 +230,9 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                                               ),
                                             ),
                                           ],
-                                        ))
+                                        )
                                       // else display a circle
-                                      : CircleLayerWidget(
-                                          options: CircleLayerOptions(circles: [
+                                      : CircleLayer(circles: [
                                           CircleMarker(
                                               point: LatLng(
                                                   itms.elementAt(0).latitude,
@@ -246,37 +242,35 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                                               useRadiusInMeter: true,
                                               radius: 1000 // 1 km
                                               ),
-                                        ])),
+                                        ]),
                                   // Draw a line with the last 10 positions coming from GPS
-                                  PolylineLayerWidget(
-                                    options: PolylineLayerOptions(
-                                      polylines: [
-                                        Polyline(
-                                            points: itms
-                                                .where((e) => e.time.isAfter(
-                                                    DateTime.now().subtract(
-                                                        const Duration(
-                                                            hours: 6))))
-                                                .where((e) =>
-                                                    e.source == gpsSource)
-                                                .map((e) => LatLng(
-                                                    e.latitude, e.longitude))
-                                                .toList(),
-                                            strokeWidth: 4.0,
-                                            color: Colors.blueAccent),
-                                        Polyline(
-                                            points: itms
-                                                .takeWhile(
-                                                    (value) => value.sportMode)
-                                                .where((e) =>
-                                                    e.source == gpsSource)
-                                                .map((e) => LatLng(
-                                                    e.latitude, e.longitude))
-                                                .toList(),
-                                            strokeWidth: 4.0,
-                                            color: Colors.pink),
-                                      ],
-                                    ),
+                                  PolylineLayer(
+                                    polylines: [
+                                      Polyline(
+                                          points: itms
+                                              .where((e) => e.time.isAfter(
+                                                  DateTime.now().subtract(
+                                                      const Duration(
+                                                          hours: 6))))
+                                              .where(
+                                                  (e) => e.source == gpsSource)
+                                              .map((e) => LatLng(
+                                                  e.latitude, e.longitude))
+                                              .toList(),
+                                          strokeWidth: 4.0,
+                                          color: Colors.blueAccent),
+                                      Polyline(
+                                          points: itms
+                                              .takeWhile(
+                                                  (value) => value.sportMode)
+                                              .where(
+                                                  (e) => e.source == gpsSource)
+                                              .map((e) => LatLng(
+                                                  e.latitude, e.longitude))
+                                              .toList(),
+                                          strokeWidth: 4.0,
+                                          color: Colors.pink),
+                                    ],
                                   ),
                                 ],
                               ),

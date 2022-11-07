@@ -9,9 +9,9 @@ AospLocation getAospLocationProvider() => AospLocationWeb();
 class AospLocationWeb extends AospLocation {
   @override
   Future<String> get getPositionFromGPS async {
-    html.Geolocation _geolocation = html.window.navigator.geolocation;
+    html.Geolocation geolocation = html.window.navigator.geolocation;
     try {
-      final geoPosition = await _geolocation.getCurrentPosition(
+      final geoPosition = await geolocation.getCurrentPosition(
         enableHighAccuracy: true,
         timeout: const Duration(seconds: 30),
       );
