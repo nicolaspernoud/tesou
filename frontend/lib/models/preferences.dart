@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class Preferences with LocalFilePersister {
-  Preferences();
+class Preferences extends LocalFilePersister {
+  Preferences() : super("settings");
 
   String _hostname = "";
 
@@ -86,26 +86,28 @@ class Preferences with LocalFilePersister {
 }
 
 abstract class LocalFilePersister {
+  late String name;
+  LocalFilePersister(this.name);
   fromJson(String source);
   toJson();
 
   // Persistence
-  final String _fileName = "settings.json";
+  String _fileName() => "$name.json";
 
   Future<File> get localFile async {
     if (Platform.isAndroid) {
       final directory = await getExternalStorageDirectory();
       await Directory('${directory?.path}').create(recursive: true);
-      return File('${directory?.path}/$_fileName');
+      return File('${directory?.path}/${_fileName()}');
     }
     final directory = await getApplicationDocumentsDirectory();
-    return File('${directory.path}/$_fileName');
+    return File('${directory.path}/${_fileName()}');
   }
 
   read() async {
     if (kIsWeb) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? contents = prefs.getString("settings");
+      String? contents = prefs.getString(name);
       if (contents != null) fromJson(contents);
     } else {
       try {

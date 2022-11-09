@@ -34,10 +34,12 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+@pragma('vm:entry-point')
 void normalModeCallback() {
   FlutterForegroundTask.setTaskHandler(NormalTaskHandler());
 }
 
+@pragma('vm:entry-point')
 void sportModeCallback() {
   FlutterForegroundTask.setTaskHandler(SportTaskHandler());
 }
@@ -115,7 +117,6 @@ class MyAppState extends State<MyApp> {
         foregroundTaskOptions: ForegroundTaskOptions(
           interval: sportMode ? 30 * 60 * 1000 : 5 * 60 * 1000,
           autoRunOnBoot: true,
-          allowWifiLock: false,
         ));
     var locale = ui.window.locale;
     bool reqResult = await FlutterForegroundTask.startService(

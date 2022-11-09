@@ -320,8 +320,9 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                         icon: const Icon(Icons.my_location),
                         onPressed: () async {
                           try {
-                            await getPositionAndPushToServer(false);
-                            await panMap();
+                            if (await getPositionAndPushToServer(false)) {
+                              await panMap();
+                            }
                             // ignore: empty_catches
                           } on Exception {}
                         }),

@@ -1,18 +1,20 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:tesou/globals.dart';
-import 'package:tesou/models/crud.dart';
 import 'package:tesou/models/position.dart';
 import 'package:http/http.dart' as http;
 import 'package:aosp_location/aosp_location.dart';
 
-Future<void> getPositionAndPushToServer(bool sportMode) async {
+Future<bool> getPositionAndPushToServer(bool sportMode) async {
   await App().init();
+
   await App().log("Getting position...");
   try {
     final String position = await AospLocation.instance.getPositionFromGPS;
+    // Fast mock for Debugging
+    //final String position ='${45.50 + Random().nextDouble() / 50}:${4.835659 + Random().nextDouble() / 50}:50';
     final positions = position.split(":");
-    await APICrud<Position>().create(Position(
+    // Push a position to the position queue
+    var pos = Position(
         id: 0,
         userId: App().prefs.userId,
         latitude: double.parse(positions[0]),
@@ -20,10 +22,9 @@ Future<void> getPositionAndPushToServer(bool sportMode) async {
         batteryLevel: int.parse(positions[2]),
         source: "GPS",
         time: DateTime.now(),
-        sportMode: sportMode));
+        sportMode: sportMode);
     await App().log("Got position from GPS");
-  } on HttpException catch (e) {
-    await App().log(e.toString());
+    return await App().pushPosition(pos);
   } on Exception catch (e) {
     await App().log(e.toString());
     var base = "${App().prefs.hostname}/api/positions/cid";
@@ -46,6 +47,7 @@ Future<void> getPositionAndPushToServer(bool sportMode) async {
       await App().log(e.toString());
     }
   }
+  return false;
 }
 
 Future<Position?> createPositionFromStream(String event) async {
@@ -61,7 +63,7 @@ Future<Position?> createPositionFromStream(String event) async {
         source: "GPS",
         time: DateTime.now(),
         sportMode: true);
-    await APICrud<Position>().create(pos);
+    App().pushPosition(pos);
     return pos;
   } catch (e) {
     await App().log(e.toString());

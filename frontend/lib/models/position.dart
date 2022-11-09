@@ -40,7 +40,7 @@ class Position extends Serialisable with EquatableMixin {
 
   factory Position.fromJson(Map<String, dynamic> json) {
     return Position(
-        id: json['id'],
+        id: json['id'] ?? 0,
         userId: json['user_id'],
         latitude: json['latitude'],
         longitude: json['longitude'],
