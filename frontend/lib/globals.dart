@@ -38,15 +38,19 @@ class App {
 
   Future init() async {
     prefs = Preferences();
+    _positions = PositionQueue();
     if (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST')) {
       await prefs.read();
+      // Reload the position queue from cache
+      await _positions.read();
     }
     _initialized = true;
   }
 
   Future<bool> pushPosition(Position pos) async {
-    // Reload the position queue from cache
-    _positions.read();
+    if (!_initialized) {
+      await init();
+    }
     // Add the position to the queue
     _positions.push(pos);
     // Try to push all positions to the server

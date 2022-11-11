@@ -41,13 +41,12 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
   late Future<List<Position>> positions;
   late Future<List<User>> users;
   String displayedUser = "1";
-  late final MapController mapController;
+  final MapController mapController = MapController();
   bool _sportMode = false;
 
   @override
   void initState() {
     super.initState();
-    mapController = MapController();
     if (App().hasToken) {
       positions = widget.crud.read("user_id=$displayedUser");
       users = widget.usersCrud.read();
@@ -223,9 +222,12 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                                               point: LatLng(
                                                   itms.elementAt(0).latitude,
                                                   itms.elementAt(0).longitude),
-                                              builder: (ctx) => const Icon(
+                                              builder: (ctx) => Icon(
                                                 Icons.location_on,
-                                                color: Colors.blue,
+                                                color:
+                                                    itms.elementAt(0).sportMode
+                                                        ? Colors.pink
+                                                        : Colors.blue,
                                                 size: 40,
                                               ),
                                             ),
@@ -243,7 +245,7 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                                               radius: 1000 // 1 km
                                               ),
                                         ]),
-                                  // Draw a line with the last 10 positions coming from GPS
+                                  // Draw a line with the last positions coming from GPS
                                   PolylineLayer(
                                     polylines: [
                                       Polyline(

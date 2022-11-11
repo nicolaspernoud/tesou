@@ -51,7 +51,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
     this.eventSink = eventSink
     locationManager.requestLocationUpdates(
         LocationManager.GPS_PROVIDER,
-        GPS_TIMEOUT_MS,
+        2500L,
         0f,
         streamLocationListener,
         Looper.myLooper()
@@ -117,7 +117,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
         val myLooper = Looper.myLooper()
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER,
-            GPS_TIMEOUT_MS,
+            5000L,
             0f,
             locationListener,
             myLooper

@@ -165,7 +165,7 @@ class MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _receivePort?.close();
+    _closeReceivePort();
     super.dispose();
   }
 
