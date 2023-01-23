@@ -24,8 +24,8 @@ class NewEditUserState extends State<NewEditUser> {
     return Scaffold(
         appBar: AppBar(
           title: widget.user.id > 0
-              ? Text(MyLocalizations.of(context)!.tr("edit_user"))
-              : Text(MyLocalizations.of(context)!.tr("new_user")),
+              ? Text(tr(context, "edit_user"))
+              : Text(tr(context, "new_user")),
           actions: widget.user.id > 0
               ? [
                   IconButton(
@@ -35,8 +35,7 @@ class NewEditUserState extends State<NewEditUser> {
                         if (!mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(MyLocalizations.of(context)!
-                                .tr("user_deleted"))));
+                            content: Text(tr(context, "user_deleted"))));
                       })
                 ]
               : null,
@@ -51,7 +50,7 @@ class NewEditUserState extends State<NewEditUser> {
                   if (widget.user.id > 0)
                     Row(
                       children: [
-                        Text(MyLocalizations.of(context)!.tr("active_user")),
+                        Text(tr(context, "active_user")),
                         Checkbox(
                           value: App().prefs.userId == widget.user.id,
                           onChanged: (bool? value) {
@@ -65,13 +64,11 @@ class NewEditUserState extends State<NewEditUser> {
                     ),
                   TextFormField(
                     initialValue: widget.user.name,
-                    decoration: InputDecoration(
-                        labelText: MyLocalizations.of(context)!.tr("name")),
+                    decoration: InputDecoration(labelText: tr(context, "name")),
                     // The validator receives the text that the user has entered.
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return MyLocalizations.of(context)!
-                            .tr("please_enter_some_text");
+                        return tr(context, "please_enter_some_text");
                       }
                       return null;
                     },
@@ -81,13 +78,12 @@ class NewEditUserState extends State<NewEditUser> {
                   ),
                   TextFormField(
                     initialValue: widget.user.surname,
-                    decoration: InputDecoration(
-                        labelText: MyLocalizations.of(context)!.tr("surname")),
+                    decoration:
+                        InputDecoration(labelText: tr(context, "surname")),
                     // The validator receives the text that the user has entered.
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return MyLocalizations.of(context)!
-                            .tr("please_enter_some_text");
+                        return tr(context, "please_enter_some_text");
                       }
                       return null;
                     },
@@ -101,8 +97,7 @@ class NewEditUserState extends State<NewEditUser> {
                       onPressed: () async {
                         // Validate returns true if the form is valid, or false otherwise.
                         if (_formKey.currentState!.validate()) {
-                          var msg =
-                              MyLocalizations.of(context)!.tr("user_created");
+                          var msg = tr(context, "user_created");
                           try {
                             if (widget.user.id > 0) {
                               await widget.crud.update(widget.user);
@@ -122,7 +117,7 @@ class NewEditUserState extends State<NewEditUser> {
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
-                        child: Text(MyLocalizations.of(context)!.tr("submit")),
+                        child: Text(tr(context, "submit")),
                       ),
                     ),
                   ),

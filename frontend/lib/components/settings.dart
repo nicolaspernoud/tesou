@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tesou/models/user.dart';
 import 'package:tesou/models/crud.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
@@ -37,9 +38,22 @@ class SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text(MyLocalizations.of(context)!.tr("settings")),
-        ),
+        appBar: AppBar(title: Text(tr(context, "settings")), actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: tr(context, "share_my_position"),
+            onPressed: () async {
+              var token = await getShareToken();
+              if (!mounted) return;
+              Clipboard.setData(ClipboardData(
+                  text:
+                      "${tr(context, "go_to")}\n\n${App().prefs.hostname}\n\n${tr(context, "and_enter_token")}\n\n$token"));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text(tr(context, "share_info_copied_to_clipboard"))));
+            },
+          ),
+        ]),
         body: Center(
             child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -56,8 +70,7 @@ class SettingsState extends State<Settings> {
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                        MyLocalizations.of(context)!.tr("get_latest_release")),
+                    child: Text(tr(context, "get_latest_release")),
                   ),
                 ),
               ),
@@ -66,7 +79,7 @@ class SettingsState extends State<Settings> {
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Text(
-                      MyLocalizations.of(context)!.tr("users"),
+                      tr(context, "users"),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -113,7 +126,7 @@ class SettingsState extends State<Settings> {
                         ],
                       );
                     } else if (snapshot.hasError) {
-                      return Text('${snapshot.error}');
+                      return const Center(child: Text('...'));
                     }
                     // By default, show a loading spinner.
                     return const Center(child: CircularProgressIndicator());
@@ -131,7 +144,7 @@ class SettingsState extends State<Settings> {
                       },
                       value: _logEnabled,
                     ),
-                    Text(MyLocalizations.of(context)!.tr("enable_log")),
+                    Text(tr(context, "enable_log")),
                   ],
                 ),
                 if (_logEnabled) ...[
@@ -191,8 +204,7 @@ class SettingsField extends StatelessWidget {
           TextFormField(
             initialValue: App().prefs.hostname,
             // initialValue: App().prefs.hostname != "" ? App().prefs.hostname : "http://10.0.2.2:8080-",
-            decoration: InputDecoration(
-                labelText: MyLocalizations.of(context)!.tr("hostname")),
+            decoration: InputDecoration(labelText: tr(context, "hostname")),
             onChanged: (text) {
               App().prefs.hostname = text;
             },
@@ -202,8 +214,7 @@ class SettingsField extends StatelessWidget {
         TextFormField(
           //initialValue: App().prefs.token != "" ? App().prefs.token : "token-",
           initialValue: App().prefs.token,
-          decoration: InputDecoration(
-              labelText: MyLocalizations.of(context)!.tr("token")),
+          decoration: InputDecoration(labelText: tr(context, "token")),
           onChanged: (text) {
             App().prefs.token = text;
           },

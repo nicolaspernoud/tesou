@@ -160,3 +160,21 @@ class APICrud<T extends Serialisable> extends Crud<T> {
     }
   }
 }
+
+Future<String> getShareToken() async {
+  try {
+    final response = await http.Client().get(
+      Uri.parse('${App().prefs.hostname}/api/token'),
+      headers: <String, String>{
+        'Authorization': "Bearer ${App().prefs.token}",
+      },
+    );
+    if (response.statusCode == 200) {
+      return utf8.decode(response.bodyBytes);
+    } else {
+      throw Exception('Failed to get token');
+    }
+  } on Exception {
+    rethrow;
+  }
+}

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:tesou/globals.dart';
 import 'package:tesou/i18n.dart';
 import 'package:tesou/models/user.dart';
 
@@ -56,7 +55,7 @@ class UsersDropdownState extends State<UsersDropdown> {
             }
             child = Row(
               children: [
-                Text(MyLocalizations.of(context)!.tr("user")),
+                Text(tr(context, "user")),
                 const SizedBox(
                   width: 8,
                 ),
@@ -80,12 +79,12 @@ class UsersDropdownState extends State<UsersDropdown> {
                 ),
               ],
             );
-          } else if (snapshot.hasError && App().hasToken) {
-            child = Text('${snapshot.error}');
           } else {
             child = Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(MyLocalizations.of(context)!.tr("no_users")),
+              child: snapshot.hasError
+                  ? const Text("...")
+                  : Text(tr(context, "no_users")),
             );
           }
           return AnimatedSwitcher(

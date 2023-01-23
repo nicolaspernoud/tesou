@@ -22,6 +22,7 @@ mod schema;
 pub mod tester;
 #[cfg(test)]
 mod tests;
+mod token;
 mod utils;
 
 use log::info;

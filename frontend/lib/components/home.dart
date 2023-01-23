@@ -87,7 +87,7 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
     await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text(MyLocalizations.of(context)!.tr("settings")),
+        title: Text(tr(context,"settings")),
         content: const SizedBox(
           height: 150,
           child: SettingsField(),
@@ -282,7 +282,7 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                       );
                     } else if (snapshot.hasError) {
                       child = Text(
-                          MyLocalizations.of(context)!.tr("try_new_token"));
+                          tr(context,"try_new_token"));
                     } else {
                       child = const CircularProgressIndicator();
                     }

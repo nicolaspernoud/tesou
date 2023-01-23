@@ -73,7 +73,7 @@ class SportTaskHandler extends TaskHandler {
       var pos = await createPositionFromStream(event);
       await App().log("Got position from stream : $pos");
       // Send data to the main isolate.
-      sendPort?.send(pos);
+      sendPort?.send(pos!.toJson());
       await App().log("Sent position to main isolate");
     });
   }

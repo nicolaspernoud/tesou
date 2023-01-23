@@ -6,6 +6,7 @@ mod tests {
     use crate::{
         app::AppConfig,
         models::{position_tests::position_test, user_tests::user_test},
+        token::token_test,
     };
     #[actix_rt::test]
     async fn test_models() {
@@ -31,5 +32,6 @@ mod tests {
 
         user_test(&pool, &app_data).await;
         position_test(&pool, &app_data).await;
+        token_test(&pool, &app_data).await;
     }
 }

@@ -1,3 +1,5 @@
+use std::time::SystemTimeError;
+
 use actix_web::error::BlockingError;
 use actix_web::error::PayloadError;
 use actix_web::error::ResponseError;
@@ -80,5 +82,17 @@ impl From<std::io::Error> for ServerError {
 impl From<PayloadError> for ServerError {
     fn from(err: PayloadError) -> ServerError {
         ServerError::Image(err.to_string())
+    }
+}
+
+impl From<SystemTimeError> for ServerError {
+    fn from(_: SystemTimeError) -> ServerError {
+        ServerError::Other("could not get system time".to_owned())
+    }
+}
+
+impl From<chacha20poly1305::Error> for ServerError {
+    fn from(_: chacha20poly1305::Error) -> ServerError {
+        ServerError::Other("could not perform chacha20poly1305 operation".to_owned())
     }
 }
