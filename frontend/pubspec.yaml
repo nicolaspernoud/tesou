@@ -33,19 +33,20 @@ dependencies:
   equatable: ^2.0.5
   flutter:
     sdk: flutter
-  flutter_foreground_task: ^3.10.0
+  flutter_foreground_task: ^6.0.0
   flutter_localizations:
     sdk: flutter
-  flutter_map: ^3.0.0
-  http: ^0.13.5
-  latlong2: ^0.8.1
+  flutter_map: ^5.0.0
+  intl: 0.18.0
+  http: ^1.1.0
+  latlong2: ^0.9.0
   path_provider: ^2.0.11
   permission_handler: ^10.2.0
   shared_preferences: ^2.0.15
   url_launcher: ^6.1.6
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.11.0
+  flutter_launcher_icons: ^0.13.0
   flutter_lints: ^2.0.1
   flutter_test:
     sdk: flutter

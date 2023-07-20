@@ -1,9 +1,9 @@
 import 'dart:isolate';
-import 'dart:ui' as ui;
 
 import 'package:aosp_location/aosp_location.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:intl/intl.dart';
 import 'dart:async';
 
 import 'package:tesou/globals.dart';
@@ -50,7 +50,7 @@ class NormalTaskHandler extends TaskHandler {
   Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
 
   @override
-  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
+  Future<void> onRepeatEvent(DateTime timestamp, SendPort? sendPort) async {
     await getPositionAndPushToServer(false);
   }
 
@@ -79,7 +79,7 @@ class SportTaskHandler extends TaskHandler {
   }
 
   @override
-  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
+  Future<void> onRepeatEvent(DateTime timestamp, SendPort? sendPort) async {}
 
   @override
   Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
@@ -118,7 +118,7 @@ class MyAppState extends State<MyApp> {
           interval: sportMode ? 30 * 60 * 1000 : 5 * 60 * 1000,
           autoRunOnBoot: true,
         ));
-    var locale = ui.window.locale;
+    var locale = Locale(Intl.defaultLocale ?? "en");
     bool reqResult = await FlutterForegroundTask.startService(
       notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
       notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
@@ -127,7 +127,7 @@ class MyAppState extends State<MyApp> {
 
     ReceivePort? receivePort;
     if (reqResult) {
-      receivePort = await FlutterForegroundTask.receivePort;
+      receivePort = FlutterForegroundTask.receivePort;
     }
 
     return _registerReceivePort(receivePort);
