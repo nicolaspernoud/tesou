@@ -46,6 +46,7 @@ pub async fn get(cfg: web::Data<AppConfig>) -> Result<impl Responder, ServerErro
 pub async fn token_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
     app_config: &actix_web::web::Data<AppConfig>,
+    ws_state: &actix_web::web::Data<crate::models::position_ws::WebSocketsState>,
 ) {
     use crate::do_test;
     use actix_web::{
@@ -53,7 +54,7 @@ pub async fn token_test(
         test,
     };
 
-    let mut app = test::init_service(crate::create_app!(pool, app_config)).await;
+    let mut app = test::init_service(crate::create_app!(pool, app_config, ws_state)).await;
 
     // Get a token
     let share_token = do_test!(app, Method::GET, "/api/token", "", StatusCode::OK, "");

@@ -140,10 +140,6 @@ class MyAppState extends State<MyApp> {
       _receivePort?.listen((position) async {
         await App()
             .log('Received position from stream into main isolate : $position');
-        if (App().prefs.userId.toString() ==
-            _homeState.currentState!.displayedUser) {
-          await _homeState.currentState?.panMap();
-        }
       });
       return true;
     }

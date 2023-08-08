@@ -1,6 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:tesou/components/users_dropdown.dart';
 import 'package:tesou/models/new_position.dart';
@@ -10,6 +11,7 @@ import 'package:tesou/models/user.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:tesou/models/preferences.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:tesou/globals.dart';
 import '../i18n.dart';
@@ -43,16 +45,22 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
   String displayedUser = "1";
   final MapController mapController = MapController();
   bool _sportMode = false;
+  WebSocketChannel? wsChannel;
 
   @override
   void initState() {
     super.initState();
     if (App().hasToken) {
-      positions = widget.crud.read("user_id=$displayedUser");
-      users = widget.usersCrud.read();
+      getData();
     } else {
       WidgetsBinding.instance.addPostFrameCallback(openSettings);
     }
+  }
+
+  @override
+  void dispose() {
+    wsChannel?.sink.close();
+    super.dispose();
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
@@ -87,7 +95,7 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
     await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text(tr(context,"settings")),
+        title: Text(tr(context, "settings")),
         content: const SizedBox(
           height: 150,
           child: SettingsField(),
@@ -107,11 +115,16 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
 
   void hasTokenOrOpenSettings(_) {
     if (App().hasToken) {
-      positions = widget.crud.read("user_id=$displayedUser");
-      users = widget.usersCrud.read();
+      getData();
     } else {
       openSettings(_);
     }
+  }
+
+  void getData() {
+    positions = widget.crud.read("user_id=$displayedUser");
+    users = widget.usersCrud.read();
+    connectWsChannel();
   }
 
   @override
@@ -281,8 +294,7 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                         ),
                       );
                     } else if (snapshot.hasError) {
-                      child = Text(
-                          tr(context,"try_new_token"));
+                      child = Text(tr(context, "try_new_token"));
                     } else {
                       child = const CircularProgressIndicator();
                     }
@@ -322,24 +334,26 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
                         icon: const Icon(Icons.my_location),
                         onPressed: () async {
                           try {
-                            if (await getPositionAndPushToServer(false)) {
-                              await panMap();
-                            }
-                            // ignore: empty_catches
-                          } on Exception {}
+                            await getPositionAndPushToServer(false);
+                          } catch (_) {}
                         }),
                 ],
-                IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () async {
-                      panMap();
-                    }),
                 if (App().hasToken)
                   UsersDropdown(
                     users: users,
-                    callback: (val) {
+                    callback: (val) async {
                       displayedUser = val.toString();
-                      panMap();
+                      setState(() {
+                        getData();
+                      });
+                      var itms = await positions;
+                      itms.sort((a, b) => b.time.compareTo(a.time));
+                      if (itms.isNotEmpty) {
+                        _animatedMapMove(
+                            LatLng(itms.elementAt(0).latitude,
+                                itms.elementAt(0).longitude),
+                            zoom(itms.elementAt(0)));
+                      }
                     },
                     initialIndex: 1,
                   ),
@@ -349,16 +363,36 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
         ));
   }
 
-  Future<void> panMap() async {
-    setState(() {
-      positions = widget.crud.read("user_id=$displayedUser");
-    });
-    var itms = await positions;
-    itms.sort((a, b) => b.time.compareTo(a.time));
-    if (itms.isNotEmpty) {
-      _animatedMapMove(
-          LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
-          zoom(itms.elementAt(0)));
+  void connectWsChannel() async {
+    await (wsChannel?.sink.close());
+    try {
+      String websocketUrl;
+      if (kIsWeb) {
+        websocketUrl =
+            "${Uri.base.scheme == "http" ? "ws" : "wss"}://${Uri.base.host}${Uri.base.hasPort ? ':${Uri.base.port}' : ''}";
+      } else {
+        websocketUrl = App().prefs.hostname.replaceFirst("http", "ws");
+      }
+      websocketUrl +=
+          "/api/positions/ws/$displayedUser?token=${App().prefs.token}";
+      wsChannel = WebSocketChannel.connect(Uri.parse(websocketUrl));
+      wsChannel?.stream.listen((message) async {
+        Position pos = Position.fromJson(json.decode((message)));
+        var itms = await positions;
+        itms.insert(0, pos);
+        if (itms.isNotEmpty) {
+          setState(() {
+            positions = Future.value(itms);
+          });
+          _animatedMapMove(
+              LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
+              zoom(itms.elementAt(0)));
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error establishing WebSocket connection: $e');
+      }
     }
   }
 

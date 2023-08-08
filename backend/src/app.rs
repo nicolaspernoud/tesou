@@ -127,10 +127,12 @@ pub async fn validator(
 
 #[macro_export]
 macro_rules! create_app {
-    ($pool:expr, $app_data:expr) => {{
+    ($pool:expr, $app_config:expr, $ws_state:expr) => {{
+        use crate::models::position_ws::{connect, count};
         use crate::models::{position, user};
         use crate::token;
         use actix_cors::Cors;
+        use actix_web::dev::Service;
         use actix_web::{error::InternalError, middleware, web, web::Data, App, HttpResponse};
         use actix_web_httpauth::middleware::HttpAuthentication;
 
@@ -143,7 +145,8 @@ macro_rules! create_app {
                         InternalError::from_response(err, HttpResponse::Conflict().finish()).into()
                     }),
             )
-            .app_data(Data::clone($app_data))
+            .app_data(Data::clone($app_config))
+            .app_data(Data::clone($ws_state))
             .wrap(Cors::permissive())
             .wrap(middleware::Logger::default())
             .service(
@@ -157,8 +160,26 @@ macro_rules! create_app {
                     .service(user::delete),
             )
             .service(
+                web::resource("/api/positions/ws/{user_id}")
+                    .route(web::get().to(connect))
+                    .wrap_fn(|req, srv| {
+                        let reference_token = req
+                            .app_data::<web::Data<AppConfig>>()
+                            .map(|data| &data.bearer_token);
+                        if let Some(ref_token) = reference_token {
+                            if req.query_string().contains(&format!("token={}", ref_token)) {
+                                return srv.call(req);
+                            }
+                        }
+                        return Box::pin(async {
+                            Err(actix_web::error::ErrorUnauthorized("Wrong token!"))
+                        });
+                    }),
+            )
+            .service(
                 web::scope("/api/positions")
                     .wrap(HttpAuthentication::bearer(crate::app::validator))
+                    .route("/ws_count", web::get().to(count))
                     .service(position::read_filter)
                     .service(position::read)
                     .service(position::create)

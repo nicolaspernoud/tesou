@@ -4,6 +4,7 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use std::env;
+use std::sync::{Arc, Mutex};
 
 use actix_web::web::Data;
 use actix_web::HttpServer;
@@ -12,6 +13,7 @@ use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 
 use crate::app::AppConfig;
+use crate::models::position_ws::WebSocketsState;
 
 mod app;
 mod db_options;
@@ -63,11 +65,16 @@ async fn main() -> std::io::Result<()> {
         env::var("API_KEY").expect("Open Cell ID API Key not found"),
     );
     // Data should be constructed outside the HttpServer::new closure if shared, potentially mutable state is desired...
-    let app_data = Data::new(app_config);
+    let app_config = Data::new(app_config);
     let bind = "0.0.0.0:8080";
+    let ws_state = WebSocketsState {
+        index: Mutex::new(0),
+        ws_actors: Arc::new(Mutex::new(Vec::new())),
+    };
+    let ws_state = Data::new(ws_state);
 
     // Start HTTP server
-    HttpServer::new(move || create_app!(pool, &app_data))
+    HttpServer::new(move || create_app!(pool, &app_config, &ws_state))
         .bind(&bind)?
         .run()
         .await

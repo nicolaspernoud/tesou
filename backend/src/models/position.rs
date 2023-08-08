@@ -1,4 +1,6 @@
+use crate::models::position_ws::{Message, WebSocketsState};
 use actix_web::HttpRequest;
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -107,6 +109,7 @@ pub async fn create(
     pool: web::Data<DbPool>,
     o: web::Json<NewPosition>,
     cfg: web::Data<AppConfig>,
+    ws_data: web::Data<WebSocketsState>,
 ) -> Result<HttpResponse, ServerError> {
     let mut hm = cfg.user_last_update.lock().await;
     check_close_timestamp!(hm, o);
@@ -127,6 +130,14 @@ pub async fn create(
     {
         Ok(created_o) => {
             update_last_timestamp!(hm, created_o);
+            let ws_actors = ws_data.ws_actors.lock().unwrap();
+            debug!("sending position to websocket actors: {:?}", ws_actors);
+            ws_actors
+                .iter()
+                .filter(|e| e.user_id == created_o.user_id)
+                .for_each(|element| {
+                    element.addr.do_send(Message(created_o.clone()));
+                });
             Ok(HttpResponse::Created().json(created_o))
         }
         Err(e) => match e {

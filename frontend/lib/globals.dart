@@ -6,9 +6,9 @@ import 'models/crud.dart';
 import 'models/position.dart';
 
 class App {
-  late Preferences prefs;
+  Preferences prefs = Preferences();
   bool _initialized = false;
-  late PositionQueue _positions;
+  final PositionQueue _positions = PositionQueue();
   App._privateConstructor();
 
   static final App _instance = App._privateConstructor();
@@ -37,8 +37,6 @@ class App {
   }
 
   Future init() async {
-    prefs = Preferences();
-    _positions = PositionQueue();
     if (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST')) {
       await prefs.read();
       // Reload the position queue from cache
@@ -53,6 +51,9 @@ class App {
     }
     // Add the position to the queue
     _positions.push(pos);
+    // Filter the queue to discard positions that are too old
+    _positions.removeWhere((element) => element.time
+        .isBefore(DateTime.now().subtract(const Duration(hours: 1))));
     // Try to push all positions to the server
     try {
       List<Position> posToRemove = [];
@@ -81,6 +82,11 @@ class PositionQueue extends LocalFilePersister {
 
   remove(List<Position> pos) async {
     queue.removeWhere((e) => pos.contains(e));
+    await write();
+  }
+
+  removeWhere(bool Function(Position) predicate) async {
+    queue.removeWhere(predicate);
     await write();
   }
 
