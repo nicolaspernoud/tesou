@@ -136,6 +136,37 @@ pub async fn position_ws_test(
         .send()
         .await
         .unwrap();
+
+    // Get a share token
+    // Get a token
+    let share_token = std::str::from_utf8(
+        &app.get("/api/token")
+            .bearer_auth("0101")
+            .send()
+            .await
+            .unwrap()
+            .body()
+            .await
+            .unwrap(),
+    )
+    .unwrap()
+    .to_string();
+    let (_resp, mut connection) = awc::Client::new()
+        .ws(app.url(&format!("/api/positions/ws/{user_id}?token={share_token}")))
+        .connect()
+        .await
+        .unwrap();
+
+    connection
+        .send(awc::ws::Message::Text("Echo with share token".into()))
+        .await
+        .unwrap();
+
+    let response = connection.next().await.unwrap().unwrap();
+    assert_eq!(
+        response,
+        awc::ws::Frame::Text("Echo with share token".into())
+    );
 }
 
 async fn create_user(app: &actix_test::TestServer) -> i32 {

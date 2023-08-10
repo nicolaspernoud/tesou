@@ -44,10 +44,10 @@ pub async fn share_validator(
     if app_config.bearer_token == credentials.token() {
         Ok(req)
     } else {
-        return Err((
+        Err((
             ErrorForbidden("a share token cannot be used to get a share token"),
             req,
-        ));
+        ))
     }
 }
 
@@ -55,86 +55,90 @@ pub async fn validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
-    let app_config = req
+    let main_token = req
         .app_data::<actix_web::web::Data<AppConfig>>()
-        .expect("Could not get token configuration");
-    if app_config.bearer_token == credentials.token() {
+        .expect("Could not get token configuration")
+        .bearer_token
+        .to_owned();
+    if main_token == credentials.token() {
+        return Ok(req);
+    }
+    // SHARE TOKEN SECTION : CHECK THE METHOD (GET ONLY ACCEPTED)
+    if req.method() != Method::GET {
+        return Err((
+            ErrorForbidden("share token cannot be use to alter data"),
+            req,
+        ));
+    }
+    let (ok, reason) = check_share_token(credentials.token(), &main_token);
+    if ok {
         Ok(req)
     } else {
-        // CHECK THE METHOD (GET ONLY ACCEPTED)
-        if req.method() != Method::GET {
-            return Err((
-                ErrorForbidden("share token cannot be use to alter data"),
-                req,
-            ));
-        }
-        // TRY TO DECRYPT THE TOKEN
-        // Get the token as base64
-        let base64_token = credentials.token();
-        debug!("Getting token, base64 token = {:?}", base64_token);
-        // Convert to &[u8]
-        let binary_token = match Base64::decode_vec(&base64_token) {
-            Ok(val) => val,
-            Err(_) => {
-                return Err((
-                    ErrorUnauthorized("could not decode share token as base 64"),
-                    req,
-                ));
-            }
-        };
-        debug!("Getting token, binary token = {:?}", binary_token);
-        // Get the main token
-        let token = &app_config.bearer_token;
-        // Derive it as a key
-        let mut hasher = Sha256::new();
-        hasher.update(token);
-        let key: [u8; 32] = hasher.finalize().into();
-        // Decipher the value of the token
-        let cipher = ChaCha20Poly1305::new(&key.into());
-        if binary_token.len() < 12 {
-            return Err((ErrorUnauthorized("Wrong token!"), req));
-        }
-        let nonce: GenericArray<_, U12> = GenericArray::clone_from_slice(&binary_token[..12]);
-        let data = match cipher.decrypt(&nonce, &binary_token[12..]) {
-            Ok(val) => val,
-            Err(_) => {
-                return Err((ErrorUnauthorized("could not decipher token data"), req));
-            }
-        };
-        // Convert it to a duration (since unix epoch, little endian)
-        let data: [u8; 8] = match data.try_into() {
-            Ok(val) => val,
-            Err(_) => {
-                return Err((ErrorUnauthorized("could not convert data to time"), req));
-            }
-        };
-        let token_time = u64::from_le_bytes(data);
-        // Get the current time
-        let time = match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(val) => val.as_secs(),
-            Err(_) => {
-                return Err((ErrorUnauthorized("could not get system time"), req));
-            }
-        };
-        // Check that no more than 2 hours passed since the creation of the token
-        if time > token_time + SHARE_TOKEN_DURATION {
-            return Err((ErrorUnauthorized("token is expired"), req));
-        }
-
-        Ok(req)
+        Err((ErrorUnauthorized(reason), req))
     }
+}
+
+pub fn check_share_token(base64_token: &str, main_token: &str) -> (bool, &'static str) {
+    // TRY TO DECRYPT THE TOKEN
+    // Get the token as base64
+    debug!("Getting token, base64 token = {:?}", base64_token);
+    // Convert to &[u8]
+    let binary_token = match Base64::decode_vec(base64_token) {
+        Ok(val) => val,
+        Err(_) => {
+            return (false, "could not decode share token as base 64");
+        }
+    };
+    debug!("Getting token, binary token = {:?}", binary_token);
+    // Derive the main token as a key
+    let mut hasher = Sha256::new();
+    hasher.update(main_token);
+    let key: [u8; 32] = hasher.finalize().into();
+    // Decipher the value of the token
+    let cipher = ChaCha20Poly1305::new(&key.into());
+    if binary_token.len() < 12 {
+        return (false, "Wrong token!");
+    }
+    let nonce: GenericArray<_, U12> = GenericArray::clone_from_slice(&binary_token[..12]);
+    let data = match cipher.decrypt(&nonce, &binary_token[12..]) {
+        Ok(val) => val,
+        Err(_) => {
+            return (false, "could not decipher token data");
+        }
+    };
+    // Convert it to a duration (since unix epoch, little endian)
+    let data: [u8; 8] = match data.try_into() {
+        Ok(val) => val,
+        Err(_) => {
+            return (false, "could not convert data to time");
+        }
+    };
+    let token_time = u64::from_le_bytes(data);
+    // Get the current time
+    let time = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(val) => val.as_secs(),
+        Err(_) => {
+            return (false, "could not get system time");
+        }
+    };
+    // Check that no more than 2 hours passed since the creation of the token
+    if time > token_time + SHARE_TOKEN_DURATION {
+        return (false, "token is expired");
+    }
+    (true, "")
 }
 
 #[macro_export]
 macro_rules! create_app {
     ($pool:expr, $app_config:expr, $ws_state:expr) => {{
-        use crate::models::position_ws::{connect, count};
-        use crate::models::{position, user};
-        use crate::token;
         use actix_cors::Cors;
         use actix_web::dev::Service;
         use actix_web::{error::InternalError, middleware, web, web::Data, App, HttpResponse};
         use actix_web_httpauth::middleware::HttpAuthentication;
+        use std::collections::HashMap;
+        use $crate::models::position_ws::{connect, count};
+        use $crate::models::{position, user};
+        use $crate::token;
 
         App::new()
             .app_data(Data::new($pool.clone()))
@@ -151,7 +155,7 @@ macro_rules! create_app {
             .wrap(middleware::Logger::default())
             .service(
                 web::scope("/api/users")
-                    .wrap(HttpAuthentication::bearer(crate::app::validator))
+                    .wrap(HttpAuthentication::bearer($crate::app::validator))
                     .service(user::read_all)
                     .service(user::read)
                     .service(user::create)
@@ -162,23 +166,66 @@ macro_rules! create_app {
             .service(
                 web::resource("/api/positions/ws/{user_id}")
                     .route(web::get().to(connect))
-                    .wrap_fn(|req, srv| {
-                        let reference_token = req
-                            .app_data::<web::Data<AppConfig>>()
-                            .map(|data| &data.bearer_token);
-                        if let Some(ref_token) = reference_token {
-                            if req.query_string().contains(&format!("token={}", ref_token)) {
-                                return srv.call(req);
+                    .wrap_fn(
+                        |req,
+                         srv|
+                         -> std::pin::Pin<
+                            Box<
+                                dyn std::future::Future<
+                                    Output = Result<
+                                        actix_web::dev::ServiceResponse,
+                                        actix_web::Error,
+                                    >,
+                                >,
+                            >,
+                        > {
+                            let reference_token = req
+                                .app_data::<web::Data<AppConfig>>()
+                                .map(|data| &data.bearer_token);
+                            if let Some(ref_token) = reference_token {
+                                // Parse the query string into a HashMap
+                                let mut params: HashMap<String, String> = HashMap::new();
+                                for pair in req.query_string().split('&') {
+                                    let mut parts = pair.splitn(2, '=');
+                                    if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+                                        params.insert(key.to_owned(), value.to_owned());
+                                    }
+                                }
+                                // Get the value of a specific parameter
+                                let query_token = match params.get("token").cloned().ok_or("") {
+                                    Ok(v) => v,
+                                    Err(_) => {
+                                        return Box::pin(async {
+                                            Err(actix_web::error::ErrorUnauthorized(
+                                                "could not parse query",
+                                            ))
+                                        });
+                                    }
+                                };
+
+                                if &query_token == ref_token {
+                                    return srv.call(req);
+                                }
+                                // SHARE TOKEN SECTION
+                                let (ok, reason) =
+                                    $crate::app::check_share_token(&query_token, ref_token);
+                                if ok {
+                                    return srv.call(req);
+                                } else {
+                                    return Box::pin(async move {
+                                        Err(actix_web::error::ErrorUnauthorized(reason))
+                                    });
+                                }
                             }
-                        }
-                        return Box::pin(async {
-                            Err(actix_web::error::ErrorUnauthorized("Wrong token!"))
-                        });
-                    }),
+                            Box::pin(async {
+                                Err(actix_web::error::ErrorUnauthorized("Wrong token!"))
+                            })
+                        },
+                    ),
             )
             .service(
                 web::scope("/api/positions")
-                    .wrap(HttpAuthentication::bearer(crate::app::validator))
+                    .wrap(HttpAuthentication::bearer($crate::app::validator))
                     .route("/ws_count", web::get().to(count))
                     .service(position::read_filter)
                     .service(position::read)
@@ -190,7 +237,7 @@ macro_rules! create_app {
             )
             .service(
                 web::scope("/api/token")
-                    .wrap(HttpAuthentication::bearer(crate::app::share_validator))
+                    .wrap(HttpAuthentication::bearer($crate::app::share_validator))
                     .service(token::get),
             )
             .service(actix_files::Files::new("/", "./web").index_file("index.html"))

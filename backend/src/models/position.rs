@@ -164,27 +164,25 @@ pub async fn read_filter(
 ) -> Result<HttpResponse, ServerError> {
     let mut conn = pool.get()?;
     let params = web::Query::<Params>::from_query(req.query_string());
-    let object;
-    match params {
+    let object = match params {
         Ok(p) => {
-            object = web::block(move || {
+            web::block(move || {
                 positions
                     .filter(user_id.eq(p.user_id))
                     .order(id.asc())
                     .load::<Position>(&mut conn)
             })
-            .await?;
+            .await?
         }
         Err(_) => {
             let mut conn = pool.get()?;
-            object =
-                web::block(move || positions.order(id.asc()).load::<Position>(&mut conn)).await?;
+            web::block(move || positions.order(id.asc()).load::<Position>(&mut conn)).await?
         }
-    }
+    };
     if let Ok(object) = object {
         Ok(HttpResponse::Ok().json(object))
     } else {
-        let res = HttpResponse::NotFound().body(format!("No objects found"));
+        let res = HttpResponse::NotFound().body("No objects found");
         Ok(res)
     }
 }
