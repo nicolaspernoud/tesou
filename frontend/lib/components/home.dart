@@ -39,7 +39,8 @@ class Home extends StatefulWidget {
   HomeState createState() => HomeState();
 }
 
-class HomeState extends State<Home> with TickerProviderStateMixin {
+class HomeState extends State<Home>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late Future<List<Position>> positions;
   late Future<List<User>> users;
   String displayedUser = "1";
@@ -55,12 +56,23 @@ class HomeState extends State<Home> with TickerProviderStateMixin {
     } else {
       WidgetsBinding.instance.addPostFrameCallback(openSettings);
     }
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     wsChannel?.sink.close();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      getData();
+    } else {
+      wsChannel?.sink.close();
+    }
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
