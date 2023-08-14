@@ -70,7 +70,8 @@ class HomeState extends State<Home>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       getData();
-    } else {
+    }
+    if (state == AppLifecycleState.paused) {
       wsChannel?.sink.close();
     }
   }
