@@ -37,11 +37,11 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_map: ^5.0.0
-  intl: 0.18.0
+  intl: ^0.18.1
   http: ^1.1.0
   latlong2: ^0.9.0
   path_provider: ^2.0.11
-  permission_handler: ^10.2.0
+  permission_handler: ^11.0.0
   shared_preferences: ^2.0.15
   url_launcher: ^6.1.6
   web_socket_channel: ^2.4.0

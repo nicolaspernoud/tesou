@@ -47,6 +47,7 @@ class HomeState extends State<Home>
   final MapController mapController = MapController();
   bool _sportMode = false;
   WebSocketChannel? wsChannel;
+  final stopwatch = Stopwatch();
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class HomeState extends State<Home>
       WidgetsBinding.instance.addPostFrameCallback(openSettings);
     }
     WidgetsBinding.instance.addObserver(this);
+    stopwatch.start();
   }
 
   @override
@@ -137,7 +139,9 @@ class HomeState extends State<Home>
   void getData() {
     positions = widget.crud.read("user_id=$displayedUser");
     users = widget.usersCrud.read();
-    connectWsChannel();
+    if (App().prefs.userId.toString() != displayedUser) {
+      connectWsChannel();
+    }
   }
 
   @override
@@ -191,14 +195,18 @@ class HomeState extends State<Home>
                               child: FlutterMap(
                                 mapController: mapController,
                                 options: MapOptions(
-                                    center: LatLng(itms.elementAt(0).latitude,
-                                        itms.elementAt(0).longitude),
-                                    zoom: zoom(itms.elementAt(0)),
-                                    minZoom: 0,
-                                    maxZoom: 18,
-                                    enableScrollWheel: true,
-                                    interactiveFlags: InteractiveFlag.all &
-                                        ~InteractiveFlag.rotate),
+                                  center: LatLng(itms.elementAt(0).latitude,
+                                      itms.elementAt(0).longitude),
+                                  zoom: zoom(itms.elementAt(0)),
+                                  minZoom: 0,
+                                  maxZoom: 18,
+                                  enableScrollWheel: true,
+                                  interactiveFlags: InteractiveFlag.all &
+                                      ~InteractiveFlag.rotate,
+                                  onPositionChanged: (position, hasGesture) {
+                                    if (hasGesture) stopwatch.reset();
+                                  },
+                                ),
                                 nonRotatedChildren: <Widget>[
                                   Column(
                                     mainAxisAlignment: MainAxisAlignment.end,
@@ -397,15 +405,30 @@ class HomeState extends State<Home>
           setState(() {
             positions = Future.value(itms);
           });
-          _animatedMapMove(
-              LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
-              zoom(itms.elementAt(0)));
+          if (stopwatch.elapsed.inSeconds > 20) {
+            _animatedMapMove(
+                LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
+                zoom(itms.elementAt(0)));
+          }
         }
       });
     } catch (e) {
       if (kDebugMode) {
         print('Error establishing WebSocket connection: $e');
       }
+    }
+  }
+
+  Future<void> addLocalPosition(Position pos) async {
+    var itms = await positions;
+    setState(() {
+      itms.add(pos);
+      positions = Future.value(itms);
+    });
+    if (stopwatch.elapsed.inSeconds > 20) {
+      _animatedMapMove(
+          LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
+          zoom(itms.elementAt(0)));
     }
   }
 
