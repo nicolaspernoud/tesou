@@ -49,7 +49,7 @@ pub async fn position_test(
         app,
         Method::POST,
         "/api/positions",
-        r#"{"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}"#,
+        r#"[{"user_id":1,"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}]"#,
         StatusCode::NOT_FOUND,
         "Item not found"
     );
@@ -69,7 +69,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+            r#"[{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -82,7 +82,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+            r#"[{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
             user_id
         ),
         StatusCode::CONFLICT,
@@ -160,7 +160,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":37.421998333333335,"longitude":-122.084,"source":"GPS","battery_level":50,"sport_mode":false,"time":1642608103000}}"#,
+            r#"[{{"user_id":{},"latitude":37.421998333333335,"longitude":-122.084,"source":"GPS","battery_level":50,"sport_mode":false,"time":1642608103000}}]"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -172,7 +172,7 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+            r#"[{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
             user_id
         ),
         StatusCode::CREATED,
@@ -185,13 +185,13 @@ pub async fn position_test(
         Method::POST,
         "/api/positions",
         &format!(
-            r#"{{"user_id":{},"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+            r#"[{{"user_id":{},"latitude":45.1911396,"longitude":5.7141747,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
             user_id
         ),
         StatusCode::CREATED,
         "{\"id\""
     );
-    // Get the positions and test that the first is id1 (the old one beeing deleted)
+    // Get the positions and test that the first is id1
     do_test!(
         app,
         Method::GET,
@@ -201,6 +201,43 @@ pub async fn position_test(
         format!(
             r#"[{{"id":{},"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false,"time":"#,
             id1, user_id
+        )
+    );
+
+    // Delete all the positions
+    do_test!(
+        app,
+        Method::DELETE,
+        "/api/positions",
+        "",
+        StatusCode::OK,
+        "Deleted all objects"
+    );
+
+    // Create two positions
+    let id = do_test_extract_id!(
+        app,
+        Method::POST,
+        "/api/positions",
+        &format!(
+            r#"[{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false,"time":5000}},{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":49,"sport_mode":false,"time":1000}}]"#,
+            user_id, user_id
+        ),
+        StatusCode::CREATED,
+        "{\"id\""
+    );
+
+    // Get the next position to test that two were created
+    do_test!(
+        app,
+        Method::GET,
+        &format!("/api/positions/{}", id + 1),
+        "",
+        StatusCode::OK,
+        format!(
+            r#"{{"id":{},"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":49,"sport_mode":false,"time":"#,
+            id + 1,
+            user_id
         )
     );
 

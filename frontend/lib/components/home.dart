@@ -356,6 +356,16 @@ class HomeState extends State<Home>
                         onPressed: () async {
                           try {
                             await getPositionAndPushToServer(false);
+                            setState(() {
+                              positions =
+                                  widget.crud.read("user_id=$displayedUser");
+                              positions.then((itms) {
+                                _animatedMapMove(
+                                    LatLng(itms.last.latitude,
+                                        itms.last.longitude),
+                                    zoom(itms.last));
+                              });
+                            });
                           } catch (_) {}
                         }),
                 ],
@@ -405,11 +415,7 @@ class HomeState extends State<Home>
           setState(() {
             positions = Future.value(itms);
           });
-          if (stopwatch.elapsed.inSeconds > 20) {
-            _animatedMapMove(
-                LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
-                zoom(itms.elementAt(0)));
-          }
+          centerView(itms);
         }
       });
     } catch (e) {
@@ -419,17 +425,21 @@ class HomeState extends State<Home>
     }
   }
 
-  Future<void> addLocalPosition(Position pos) async {
-    var itms = await positions;
-    setState(() {
-      itms.add(pos);
-      positions = Future.value(itms);
-    });
+  void centerView(List<Position> itms) {
     if (stopwatch.elapsed.inSeconds > 20) {
       _animatedMapMove(
           LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
           zoom(itms.elementAt(0)));
     }
+  }
+
+  Future<void> addLocalPosition(Position pos) async {
+    var itms = await positions;
+    setState(() {
+      itms.insert(0, pos);
+      positions = Future.value(itms);
+    });
+    centerView(itms);
   }
 
   double zoom(Position position) {

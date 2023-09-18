@@ -58,7 +58,7 @@ pub async fn position_ws_test(
 
     // Create a position
     app.post("/api/positions").bearer_auth("0101").content_type("application/json").send_body(format!(
-        r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+        r#"[{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
         user_id
     )).await.unwrap().json::<Position>().await.unwrap();
 
@@ -72,7 +72,7 @@ pub async fn position_ws_test(
     // Create a position for another user
     let other_user_id = create_user(&app).await;
     app.post("/api/positions").bearer_auth("0101").content_type("application/json").send_body(format!(
-            r#"{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+            r#"[{{"user_id":{},"latitude":45.74846,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
             other_user_id
         )).await.unwrap().json::<Position>().await.unwrap();
 
@@ -93,7 +93,7 @@ pub async fn position_ws_test(
         .unwrap();
     // Create a position
     app.post("/api/positions").bearer_auth("0101").content_type("application/json").send_body(format!(
-        r#"{{"user_id":{},"latitude":45.12345,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}"#,
+        r#"[{{"user_id":{},"latitude":45.12345,"longitude":4.84671,"source":"GPS","battery_level":50,"sport_mode":false}}]"#,
         user_id
     )).await.unwrap().json::<Position>().await.unwrap();
 

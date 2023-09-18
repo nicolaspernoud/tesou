@@ -8,6 +8,8 @@ use crate::{
     errors::ServerError, models::user::User, schema::positions, schema::positions::dsl::*,
 };
 
+const MINIMUM_TIME_GAP: i64 = 1000;
+
 macro_rules! trim {
     () => {
         fn trim(&mut self) -> &Self {
@@ -39,11 +41,7 @@ pub struct Position {
     pub time: i64,
 }
 
-impl NewPosition {
-    trim!();
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Insertable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Insertable, Default, PartialEq)]
 #[diesel(table_name = positions)]
 pub struct NewPosition {
     pub user_id: i32,
@@ -73,19 +71,39 @@ impl Position {
 
 crud_use!();
 
-macro_rules! check_close_timestamp {
-    ($hm:tt, $o:tt) => {
-        // ignore data push if there is already a recorded position in the same second
-        match $hm.get(&$o.user_id) {
-            Some(value) => {
-                if $o.time >= *value - 1000 && $o.time <= *value + 1000 {
-                    return Ok(HttpResponse::Conflict()
-                        .body("there is already a recorded position in the same second"));
+fn filter_positions(
+    pos_vec: Vec<NewPosition>,
+    reference: Option<i64>,
+    uid: Option<i32>,
+) -> Vec<NewPosition> {
+    if let Some(filter_user_id) = uid {
+        let mut filtered_positions = Vec::new();
+        let mut last_time = None;
+        for position in pos_vec {
+            if position.user_id == filter_user_id {
+                // Check if the time difference with the reference is greater than or equal to MINIMUM_TIME_GAP
+                if reference.is_none()
+                    || (position.time - reference.unwrap()).abs() >= MINIMUM_TIME_GAP
+                {
+                    // Check if there's a preceding position and its time difference is greater than MINIMUM_TIME_GAP
+                    let pos_time = position.time;
+                    if let Some(prev_time) = last_time {
+                        let diff: i64 = pos_time - prev_time;
+                        if diff.abs() >= MINIMUM_TIME_GAP {
+                            filtered_positions.push(position);
+                        }
+                    } else {
+                        // If there's no preceding position, add the current one
+                        filtered_positions.push(position);
+                    }
+                    last_time = Some(pos_time);
                 }
             }
-            None => (),
-        };
-    };
+        }
+        return filtered_positions;
+    }
+
+    pos_vec // Return the original vector untouched
 }
 
 macro_rules! update_last_timestamp {
@@ -107,23 +125,32 @@ macro_rules! delete_old_positions {
 #[post("")]
 pub async fn create(
     pool: web::Data<DbPool>,
-    o: web::Json<NewPosition>,
+    o: web::Json<Vec<NewPosition>>,
     cfg: web::Data<AppConfig>,
     ws_data: web::Data<WebSocketsState>,
 ) -> Result<HttpResponse, ServerError> {
     let mut hm = cfg.user_last_update.lock().await;
-    check_close_timestamp!(hm, o);
+    // Filter the positions : remove those that have a timestamp too close to the last update or too close together
+    let uid = o[0].user_id;
+    let o = filter_positions(o.to_owned(), hm.get(&uid).copied(), Some(uid));
+    if o.is_empty() {
+        return Ok(HttpResponse::Conflict()
+            .body("there is already a recorded position in the same second"));
+    }
     let mut conn = pool.get()?;
     match web::block(move || {
         // Check that parent for our object exists
         crate::schema::users::dsl::users
-            .find(o.user_id)
+            .find(o[0].user_id)
             .first::<User>(&mut conn)?;
         delete_old_positions!(conn);
         diesel::insert_into(positions)
-            .values(o.clone().trim())
+            .values(&(*o))
             .execute(&mut conn)?;
-        let o = positions.order(id.desc()).first::<Position>(&mut conn)?;
+        let o = positions
+            .filter(user_id.eq(uid))
+            .order(time.desc())
+            .first::<Position>(&mut conn)?;
         Ok(o)
     })
     .await?
@@ -244,7 +271,12 @@ pub async fn create_from_cid(
         battery_level: cell_id.battery_level,
         sport_mode: false,
     };
-    check_close_timestamp!(hm, o);
+    if let Some(last_update) = hm.get(&o.user_id) {
+        if (o.time - last_update).abs() < MINIMUM_TIME_GAP {
+            return Ok(HttpResponse::Conflict()
+                .body("there is already a recorded position in the same second"));
+        }
+    }
     if cell_id.lat != -1 {
         o.latitude = (cell_id.lat / 1296000) as f64;
         o.longitude = (cell_id.long / 2592000) as f64;
@@ -263,7 +295,7 @@ pub async fn create_from_cid(
             .first::<User>(&mut conn)?;
         delete_old_positions!(conn);
         diesel::insert_into(positions)
-            .values(o.clone().trim())
+            .values(o)
             .execute(&mut conn)?;
         let o = positions.order(id.desc()).first::<Position>(&mut conn)?;
         Ok(o)
@@ -306,5 +338,122 @@ async fn get_resp(cell_id: &CellId, api_key: &str) -> Result<OpenCellIdResponse,
             "Open Cell ID did not respond: {}",
             e
         ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_positions() {
+        let reference = Some(2500);
+        let vec_pos = vec![
+            NewPosition {
+                user_id: 1,
+                time: 2000,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 2,
+                time: 2000,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 1,
+                time: 2500,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 2,
+                time: 2500,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 1,
+                time: 4000,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 2,
+                time: 4000,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 1,
+                time: 5500,
+                ..Default::default()
+            },
+            NewPosition {
+                user_id: 2,
+                time: 5500,
+                ..Default::default()
+            },
+        ];
+
+        // Test case 1: Filtering by user_id 2 and reference 2500
+        let uid = Some(2);
+        let filtered_positions_1 = filter_positions(vec_pos.clone(), reference, uid);
+        assert_eq!(
+            filtered_positions_1,
+            vec![
+                NewPosition {
+                    user_id: 2,
+                    time: 4000,
+                    ..Default::default()
+                },
+                NewPosition {
+                    user_id: 2,
+                    time: 5500,
+                    ..Default::default()
+                },
+            ]
+        );
+
+        // Test case 2: Filtering by user_id 3 and reference 5000
+        let uid = Some(3);
+        let filtered_positions_2 = filter_positions(vec_pos.clone(), reference, uid);
+        assert_eq!(filtered_positions_2, vec![]);
+
+        // Test case 3: No filtering (uid = None)
+        let uid = None;
+        let filtered_positions_3 = filter_positions(vec_pos.clone(), reference, uid);
+        assert_eq!(filtered_positions_3, vec_pos);
+
+        // Test case 4: Empty positions vector
+        let empty_positions = Vec::new();
+        let uid = Some(2);
+        let filtered_positions_4 = filter_positions(empty_positions.clone(), reference, uid);
+        assert_eq!(filtered_positions_4, Vec::new());
+
+        // Test case 5: Empty positions vector (uid = None)
+        let uid = None;
+        let filtered_positions_5 = filter_positions(empty_positions.clone(), reference, uid);
+        assert_eq!(filtered_positions_5, empty_positions);
+
+        // Test case 6: Filtering by user_id 2 and no reference
+        let uid = Some(2);
+        let reference = None;
+        let filtered_positions_1 = filter_positions(vec_pos.clone(), reference, uid);
+        assert_eq!(
+            filtered_positions_1,
+            vec![
+                NewPosition {
+                    user_id: 2,
+                    time: 2000,
+                    ..Default::default()
+                },
+                NewPosition {
+                    user_id: 2,
+                    time: 4000,
+                    ..Default::default()
+                },
+                NewPosition {
+                    user_id: 2,
+                    time: 5500,
+                    ..Default::default()
+                },
+            ]
+        );
     }
 }

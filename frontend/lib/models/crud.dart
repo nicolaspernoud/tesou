@@ -85,6 +85,24 @@ class APICrud<T extends Serialisable> extends Crud<T> {
     }
   }
 
+  Future<dynamic> createMany(List<T> val) async {
+    try {
+      final response = await client.post(
+        Uri.parse('$base/$route'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': "Bearer $token"
+        },
+        body: jsonEncode(val),
+      );
+      if (response.statusCode == 201) {
+        return fromJSONbyType(T, json.decode(utf8.decode(response.bodyBytes)));
+      }
+    } on Exception {
+      rethrow;
+    }
+  }
+
   @override
   Future<T> readOne(int id) async {
     try {

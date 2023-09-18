@@ -49,19 +49,15 @@ class App {
     if (!_initialized) {
       await init();
     }
-    // Add the position to the queue
+    // Add the position at the start of the queue
     _positions.push(pos);
     // Filter the queue to discard positions that are too old
     _positions.removeWhere((element) => element.time
         .isBefore(DateTime.now().subtract(const Duration(hours: 1))));
     // Try to push all positions to the server
     try {
-      List<Position> posToRemove = [];
-      for (Position pos in _positions.queue) {
-        await APICrud<Position>().create(pos);
-        posToRemove.add(pos);
-      }
-      _positions.remove(posToRemove);
+      await APICrud<Position>().createMany(_positions.queue);
+      _positions.remove(_positions.queue);
       return true;
     } on Exception catch (e) {
       await App().log(e.toString());
