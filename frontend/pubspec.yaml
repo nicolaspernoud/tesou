@@ -45,6 +45,8 @@ dependencies:
   shared_preferences: ^2.0.15
   url_launcher: ^6.1.6
   web_socket_channel: ^2.4.0
+  geoxml: ^2.5.2
+  file_picker: ^5.5.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.0

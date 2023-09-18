@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:geoxml/geoxml.dart';
 import 'package:tesou/components/users_dropdown.dart';
 import 'package:tesou/models/new_position.dart';
 import 'package:tesou/models/position.dart';
@@ -12,6 +14,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:tesou/models/preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'package:tesou/globals.dart';
 import '../i18n.dart';
@@ -48,6 +51,7 @@ class HomeState extends State<Home>
   bool _sportMode = false;
   WebSocketChannel? wsChannel;
   final stopwatch = Stopwatch();
+  List<LatLng>? trace;
 
   @override
   void initState() {
@@ -282,6 +286,11 @@ class HomeState extends State<Home>
                                   // Draw a line with the last positions coming from GPS
                                   PolylineLayer(
                                     polylines: [
+                                      if (trace != null)
+                                        Polyline(
+                                            points: trace!,
+                                            strokeWidth: 6.0,
+                                            color: Colors.green),
                                       Polyline(
                                           points: itms
                                               .where((e) => e.time.isAfter(
@@ -356,35 +365,26 @@ class HomeState extends State<Home>
                         onPressed: () async {
                           try {
                             await getPositionAndPushToServer(false);
-                            setState(() {
-                              positions =
-                                  widget.crud.read("user_id=$displayedUser");
-                              positions.then((itms) {
-                                _animatedMapMove(
-                                    LatLng(itms.last.latitude,
-                                        itms.last.longitude),
-                                    zoom(itms.last));
-                              });
-                            });
+                            await getDataAndMoveToLastPosition();
                           } catch (_) {}
                         }),
                 ],
+                IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () async {
+                      await getDataAndMoveToLastPosition();
+                    }),
+                IconButton(
+                    icon: const Icon(Icons.timeline),
+                    onPressed: () async {
+                      await openFilePickerAndReadTrace();
+                    }),
                 if (App().hasToken)
                   UsersDropdown(
                     users: users,
                     callback: (val) async {
                       displayedUser = val.toString();
-                      setState(() {
-                        getData();
-                      });
-                      var itms = await positions;
-                      itms.sort((a, b) => b.time.compareTo(a.time));
-                      if (itms.isNotEmpty) {
-                        _animatedMapMove(
-                            LatLng(itms.elementAt(0).latitude,
-                                itms.elementAt(0).longitude),
-                            zoom(itms.elementAt(0)));
-                      }
+                      await getDataAndMoveToLastPosition();
                     },
                     initialIndex: 1,
                   ),
@@ -392,6 +392,19 @@ class HomeState extends State<Home>
             ),
           )),
         ));
+  }
+
+  Future<void> getDataAndMoveToLastPosition() async {
+    try {
+      setState(() {
+        getData();
+      });
+      var itms = await positions;
+      if (itms.isNotEmpty) {
+        _animatedMapMove(
+            LatLng(itms.last.latitude, itms.last.longitude), zoom(itms.last));
+      }
+    } catch (_) {}
   }
 
   void connectWsChannel() async {
@@ -447,6 +460,31 @@ class HomeState extends State<Home>
       return 16;
     }
     return 14;
+  }
+
+  Future<void> openFilePickerAndReadTrace() async {
+    try {
+      FilePickerResult? result =
+          await FilePicker.platform.pickFiles(type: FileType.any);
+
+      if (result != null) {
+        File file = File(result.files.single.path!);
+        String fileContent = await file.readAsString();
+        var traceXml = await GeoXml.fromGpxString(fileContent);
+
+        setState(() {
+          trace = traceXml.trks[0].trksegs[0].trkpts
+              .map((e) => LatLng(e.lat!, e.lon!))
+              .toList();
+        });
+      } else {
+        trace = null;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(e);
+      }
+    }
   }
 }
 
