@@ -140,11 +140,8 @@ class MyAppState extends State<MyApp> {
       _receivePort?.listen((position) async {
         await App()
             .log('Received position from stream into main isolate : $position');
-        if (App().prefs.userId.toString() ==
-            _homeState.currentState!.displayedUser) {
-          await _homeState.currentState
-              ?.addLocalPosition(Position.fromJson(position));
-        }
+        await _homeState.currentState
+            ?.addLocalPosition(Position.fromJson(position));
       });
       return true;
     }
@@ -190,7 +187,7 @@ class MyAppState extends State<MyApp> {
       )),
       localizationsDelegates: const [
         MyLocalizationsDelegate(),
-        GlobalMaterialLocalizations.delegate,
+        ...GlobalMaterialLocalizations.delegates,
         GlobalWidgetsLocalizations.delegate,
       ],
       supportedLocales: const [

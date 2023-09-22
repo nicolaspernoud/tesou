@@ -46,7 +46,7 @@ class HomeState extends State<Home>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   late Future<List<Position>> positions;
   late Future<List<User>> users;
-  String displayedUser = "1";
+  int displayedUser = 1;
   final MapController mapController = MapController();
   bool _sportMode = false;
   WebSocketChannel? wsChannel;
@@ -143,8 +143,10 @@ class HomeState extends State<Home>
   void getData() {
     positions = widget.crud.read("user_id=$displayedUser");
     users = widget.usersCrud.read();
-    if (App().prefs.userId.toString() != displayedUser) {
+    if (App().prefs.userId != displayedUser) {
       connectWsChannel();
+    } else {
+      wsChannel?.sink.close();
     }
   }
 
@@ -228,7 +230,9 @@ class HomeState extends State<Home>
                                                     const BorderRadius.vertical(
                                                   top: Radius.circular(10),
                                                 )),
-                                            child: _sportMode
+                                            child: _sportMode &&
+                                                    displayedUser ==
+                                                        App().prefs.userId
                                                 ? Text(
                                                     "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
                                                 : Text(
@@ -383,7 +387,7 @@ class HomeState extends State<Home>
                   UsersDropdown(
                     users: users,
                     callback: (val) async {
-                      displayedUser = val.toString();
+                      displayedUser = val;
                       await getDataAndMoveToLastPosition();
                     },
                     initialIndex: 1,
@@ -447,12 +451,14 @@ class HomeState extends State<Home>
   }
 
   Future<void> addLocalPosition(Position pos) async {
-    var itms = await positions;
-    setState(() {
-      itms.insert(0, pos);
-      positions = Future.value(itms);
-    });
-    centerView(itms);
+    if (pos.userId == displayedUser) {
+      var itms = await positions;
+      setState(() {
+        itms.insert(0, pos);
+        positions = Future.value(itms);
+      });
+      centerView(itms);
+    }
   }
 
   double zoom(Position position) {
@@ -464,12 +470,11 @@ class HomeState extends State<Home>
 
   Future<void> openFilePickerAndReadTrace() async {
     try {
-      FilePickerResult? result =
-          await FilePicker.platform.pickFiles(type: FileType.any);
+      FilePickerResult? result = await FilePicker.platform
+          .pickFiles(type: FileType.any, withData: true);
 
       if (result != null) {
-        File file = File(result.files.single.path!);
-        String fileContent = await file.readAsString();
+        String fileContent = String.fromCharCodes(result.files.single.bytes!);
         var traceXml = await GeoXml.fromGpxString(fileContent);
 
         setState(() {
