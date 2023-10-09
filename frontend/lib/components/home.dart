@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_beep/flutter_beep.dart';
 import 'package:geoxml/geoxml.dart';
 import 'package:tesou/components/users_dropdown.dart';
 import 'package:tesou/models/new_position.dart';
@@ -19,6 +18,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:tesou/globals.dart';
 import '../i18n.dart';
 import 'settings.dart';
+import 'package:tesou/models/position.dart' as position;
 
 const gpsSource = "GPS";
 
@@ -52,6 +52,7 @@ class HomeState extends State<Home>
   WebSocketChannel? wsChannel;
   final stopwatch = Stopwatch();
   List<LatLng>? trace;
+  bool closeToTrace = false;
 
   @override
   void initState() {
@@ -143,7 +144,7 @@ class HomeState extends State<Home>
   void getData() {
     positions = widget.crud.read("user_id=$displayedUser");
     users = widget.usersCrud.read();
-    if (App().prefs.userId != displayedUser) {
+    if (App().prefs.userId != displayedUser || kIsWeb) {
       connectWsChannel();
     } else {
       wsChannel?.sink.close();
@@ -230,9 +231,7 @@ class HomeState extends State<Home>
                                                     const BorderRadius.vertical(
                                                   top: Radius.circular(10),
                                                 )),
-                                            child: _sportMode &&
-                                                    displayedUser ==
-                                                        App().prefs.userId
+                                            child: lastRunDistance(itms) > 0
                                                 ? Text(
                                                     "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
                                                 : Text(
@@ -458,6 +457,22 @@ class HomeState extends State<Home>
         positions = Future.value(itms);
       });
       centerView(itms);
+      // If we enter the trace proximity, make a success beep, if we leave, make a failure beep
+      if (trace != null) {
+        var gettingCloseToTrace = trace!
+            .where((element) =>
+                position.Haversine.haversine(element.latitude,
+                    element.longitude, pos.latitude, pos.longitude) <
+                0.05)
+            .isNotEmpty;
+        if (!closeToTrace && gettingCloseToTrace) {
+          closeToTrace = true;
+          FlutterBeep.beep();
+        } else if (closeToTrace && !gettingCloseToTrace) {
+          closeToTrace = false;
+          FlutterBeep.beep(false);
+        }
+      }
     }
   }
 
