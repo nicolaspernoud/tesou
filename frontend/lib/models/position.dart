@@ -14,15 +14,14 @@ class Position extends Serialisable with EquatableMixin {
   bool sportMode;
 
   Position(
-      {required id,
+      {required super.id,
       required this.userId,
       required this.latitude,
       required this.longitude,
       required this.source,
       required this.batteryLevel,
       required this.sportMode,
-      required this.time})
-      : super(id: id);
+      required this.time});
 
   @override
   Map<String, dynamic> toJson() {

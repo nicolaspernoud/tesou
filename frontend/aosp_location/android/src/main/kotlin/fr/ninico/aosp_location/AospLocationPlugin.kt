@@ -59,9 +59,9 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
   }
 
   override fun onCancel(arguments: Any?) {
+    locationManager.removeUpdates(streamLocationListener)
     eventSink = null
     messageChannel = null
-    locationManager.removeUpdates(streamLocationListener)
   }
 
   override fun onAttachedToEngine(
@@ -86,6 +86,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
+    onCancel(null)
   }
 
   private fun getPositionFromGPS(result: MethodChannel.Result) {

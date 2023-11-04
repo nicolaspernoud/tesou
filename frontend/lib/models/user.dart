@@ -6,10 +6,10 @@ class User extends Serialisable with EquatableMixin {
   String surname;
 
   User({
-    required id,
+    required super.id,
     required this.name,
     required this.surname,
-  }) : super(id: id);
+  });
 
   @override
   Map<String, dynamic> toJson() {

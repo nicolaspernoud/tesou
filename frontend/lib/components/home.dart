@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_beep/flutter_beep.dart';
@@ -31,12 +32,11 @@ class Home extends StatefulWidget {
   final Function foregroundTaskCommand;
 
   const Home(
-      {Key? key,
+      {super.key,
       required this.crud,
       required this.usersCrud,
       required this.title,
-      required this.foregroundTaskCommand})
-      : super(key: key);
+      required this.foregroundTaskCommand});
 
   @override
   HomeState createState() => HomeState();
@@ -53,6 +53,7 @@ class HomeState extends State<Home>
   final stopwatch = Stopwatch();
   List<LatLng>? trace;
   bool closeToTrace = false;
+  int kms = 0;
 
   @override
   void initState() {
@@ -85,10 +86,13 @@ class HomeState extends State<Home>
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     final latTween = Tween<double>(
-        begin: mapController.center.latitude, end: destLocation.latitude);
+        begin: mapController.camera.center.latitude,
+        end: destLocation.latitude);
     final lngTween = Tween<double>(
-        begin: mapController.center.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: mapController.zoom, end: destZoom);
+        begin: mapController.camera.center.longitude,
+        end: destLocation.longitude);
+    final zoomTween =
+        Tween<double>(begin: mapController.camera.zoom, end: destZoom);
     var controller = AnimationController(
         duration: const Duration(milliseconds: 500), vsync: this);
     Animation<double> animation =
@@ -202,56 +206,25 @@ class HomeState extends State<Home>
                               child: FlutterMap(
                                 mapController: mapController,
                                 options: MapOptions(
-                                  center: LatLng(itms.elementAt(0).latitude,
+                                  initialCenter: LatLng(
+                                      itms.elementAt(0).latitude,
                                       itms.elementAt(0).longitude),
-                                  zoom: zoom(itms.elementAt(0)),
+                                  initialZoom: zoom(itms.elementAt(0)),
                                   minZoom: 0,
                                   maxZoom: 18,
-                                  enableScrollWheel: true,
-                                  interactiveFlags: InteractiveFlag.all &
-                                      ~InteractiveFlag.rotate,
+                                  interactionOptions: const InteractionOptions(
+                                    enableScrollWheel: true,
+                                    flags: InteractiveFlag.all &
+                                        ~InteractiveFlag.rotate,
+                                  ),
                                   onPositionChanged: (position, hasGesture) {
                                     if (hasGesture) stopwatch.reset();
                                   },
                                 ),
-                                nonRotatedChildren: <Widget>[
-                                  Column(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 5, horizontal: 10),
-                                            decoration: BoxDecoration(
-                                                color: Colors.grey.shade50,
-                                                borderRadius:
-                                                    const BorderRadius.vertical(
-                                                  top: Radius.circular(10),
-                                                )),
-                                            child: lastRunDistance(itms) > 0
-                                                ? Text(
-                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
-                                                : Text(
-                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}%",
-                                                    style: const TextStyle(
-                                                      fontSize: 16,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                          )
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                ],
                                 children: [
                                   TileLayer(
                                     urlTemplate:
-                                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                    subdomains: const ['a', 'b', 'c'],
+                                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                                   ),
                                   // If the last element comes from GPS, display a marker
                                   itms.elementAt(0).source == gpsSource
@@ -263,7 +236,7 @@ class HomeState extends State<Home>
                                               point: LatLng(
                                                   itms.elementAt(0).latitude,
                                                   itms.elementAt(0).longitude),
-                                              builder: (ctx) => Icon(
+                                              child: Icon(
                                                 Icons.location_on,
                                                 color:
                                                     itms.elementAt(0).sportMode
@@ -320,6 +293,37 @@ class HomeState extends State<Home>
                                           color: Colors.pink),
                                     ],
                                   ),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 5, horizontal: 10),
+                                            decoration: BoxDecoration(
+                                                color: Colors.grey.shade50,
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                  top: Radius.circular(10),
+                                                )),
+                                            child: lastRunDistance(itms) > 0
+                                                ? Text(
+                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
+                                                : Text(
+                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}%",
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                          )
+                                        ],
+                                      ),
+                                    ],
+                                  )
                                 ],
                               ),
                             ),
@@ -358,6 +362,7 @@ class HomeState extends State<Home>
                           : const Icon(Icons.directions_walk),
                       onPressed: () async {
                         setState(() {
+                          kms = 0;
                           _sportMode = !_sportMode;
                         });
                         widget.foregroundTaskCommand(_sportMode);
@@ -473,6 +478,14 @@ class HomeState extends State<Home>
           FlutterBeep.beep(false);
         }
       }
+      // Beep every kilometers
+      int newKms = lastRunDistance(itms).floor();
+      if (newKms > kms) {
+        FlutterBeep.beep();
+        await Future.delayed(const Duration(seconds: 1));
+        FlutterBeep.beep();
+      }
+      kms = newKms;
     }
   }
 
@@ -498,7 +511,9 @@ class HomeState extends State<Home>
               .toList();
         });
       } else {
-        trace = null;
+        setState(() {
+          trace = null;
+        });
       }
     } catch (e) {
       if (kDebugMode) {
@@ -510,7 +525,7 @@ class HomeState extends State<Home>
 
 class StickyBottomAppBar extends StatelessWidget {
   final BottomAppBar child;
-  const StickyBottomAppBar({Key? key, required this.child}) : super(key: key);
+  const StickyBottomAppBar({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
