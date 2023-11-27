@@ -176,7 +176,15 @@ class MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tesou!',
-      theme: ThemeData(primarySwatch: Colors.green),
+      theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.green,
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.green,
+            elevation: 4,
+            shadowColor: Theme.of(context).shadowColor,
+          )),
       home: WithForegroundTask(
           child: Home(
         key: _homeState,
