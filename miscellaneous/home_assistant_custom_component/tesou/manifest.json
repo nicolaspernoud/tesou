@@ -1,0 +1,16 @@
+{
+  "domain": "tesou",
+  "name": "tesou",
+  "codeowners": [
+    "@nicolaspernoud"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/tesou",
+  "homekit": {},
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "ssdp": [],
+  "zeroconf": [],
+  "version": "0.0.1"
+}
