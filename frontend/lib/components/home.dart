@@ -481,9 +481,12 @@ class HomeState extends State<Home>
       // Beep every kilometers
       int newKms = lastRunDistance(itms).floor();
       if (newKms > kms) {
-        FlutterBeep.beep();
-        await Future.delayed(const Duration(seconds: 1));
-        FlutterBeep.beep();
+        if (newKms % 5 == 0) {
+          await FlutterBeep.playSysSound(
+              AndroidSoundIDs.TONE_CDMA_ALERT_INCALL_LITE);
+        } else {
+          FlutterBeep.playSysSound(AndroidSoundIDs.TONE_CDMA_PRESSHOLDKEY_LITE);
+        }
       }
       kms = newKms;
     }

@@ -10,18 +10,18 @@ import 'mock_api.dart';
 
 dynamic fromJSONbyType(Type t, Map<String, dynamic> map) {
   switch (t) {
-    case Position:
+    case const (Position):
       return Position.fromJson(map);
-    case User:
+    case const (User):
       return User.fromJson(map);
   }
 }
 
 String routeByType(Type t) {
   switch (t) {
-    case Position:
+    case const (Position):
       return "positions";
-    case User:
+    case const (User):
       return "users";
     default:
       return "";

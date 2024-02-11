@@ -10,7 +10,7 @@ use crate::{
     },
 };
 use actix_web::web::Bytes;
-use futures_util::{SinkExt as _, StreamExt as _};
+use futures::{SinkExt as _, StreamExt as _};
 use tokio::time::sleep;
 
 use super::position_ws::WebSocketsState;
