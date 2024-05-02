@@ -44,7 +44,7 @@ class SettingsState extends State<Settings> {
             tooltip: tr(context, "share_my_position"),
             onPressed: () async {
               var token = await getShareToken();
-              if (!mounted) return;
+               if (!context.mounted) return;
               Clipboard.setData(ClipboardData(
                   text:
                       "${tr(context, "go_to")}\n\n${App().prefs.hostname}\n\n${tr(context, "and_enter_token")}\n\n$token"));
