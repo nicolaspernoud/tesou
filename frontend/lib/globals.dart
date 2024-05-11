@@ -57,7 +57,7 @@ class App {
     // Try to push all positions to the server
     try {
       await APICrud<Position>().createMany(_positions.queue);
-      _positions.remove(_positions.queue);
+      _positions.clear();
       return true;
     } on Exception catch (e) {
       await App().log(e.toString());
@@ -76,8 +76,8 @@ class PositionQueue extends LocalFilePersister {
     await write();
   }
 
-  remove(List<Position> pos) async {
-    queue.removeWhere((e) => pos.contains(e));
+  clear() async {
+    queue = [];
     await write();
   }
 

@@ -114,7 +114,7 @@ class HomeState extends State<Home>
     controller.forward();
   }
 
-  void openSettings(_) async {
+  void openSettings(Duration? d) async {
     await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -132,15 +132,15 @@ class HomeState extends State<Home>
       ),
     );
     setState(() {
-      hasTokenOrOpenSettings(_);
+      hasTokenOrOpenSettings();
     });
   }
 
-  void hasTokenOrOpenSettings(_) {
+  void hasTokenOrOpenSettings() {
     if (App().hasToken) {
       getData();
     } else {
-      openSettings(_);
+      openSettings(null);
     }
   }
 
@@ -182,7 +182,7 @@ class HomeState extends State<Home>
                     return Settings(crud: APICrud<User>());
                   }));
                   setState(() {
-                    hasTokenOrOpenSettings(null);
+                    hasTokenOrOpenSettings();
                   });
                 })
           ],
@@ -464,12 +464,14 @@ class HomeState extends State<Home>
       centerView(itms);
       // If we enter the trace proximity, make a success beep, if we leave, make a failure beep
       if (trace != null) {
-        var gettingCloseToTrace = trace!
-            .where((element) =>
-                position.Haversine.haversine(element.latitude,
-                    element.longitude, pos.latitude, pos.longitude) <
-                0.05)
-            .isNotEmpty;
+        bool gettingCloseToTrace = trace!.cast<LatLng?>().firstWhere(
+                  (element) =>
+                      position.Haversine.haversine(element!.latitude,
+                          element.longitude, pos.latitude, pos.longitude) <
+                      0.05,
+                  orElse: () => null,
+                ) !=
+            null;
         if (!closeToTrace && gettingCloseToTrace) {
           closeToTrace = true;
           FlutterBeep.beep();
