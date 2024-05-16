@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_beep/flutter_beep.dart';
 import 'package:geoxml/geoxml.dart';
+import 'package:tesou/components/speed_gauge.dart';
 import 'package:tesou/components/users_dropdown.dart';
 import 'package:tesou/models/new_position.dart';
 import 'package:tesou/models/position.dart';
@@ -323,7 +324,13 @@ class HomeState extends State<Home>
                                         ],
                                       ),
                                     ],
-                                  )
+                                  ),
+                                  if (_sportMode)
+                                    SpeedGauge(
+                                      speed: lastRunSpeed(itms.sublist(0, 4)),
+                                      maxSpeed: 20,
+                                      size: 50,
+                                    )
                                 ],
                               ),
                             ),
