@@ -325,12 +325,17 @@ class HomeState extends State<Home>
                                       ),
                                     ],
                                   ),
-                                  if (_sportMode)
-                                    SpeedGauge(
-                                      speed: lastRunSpeed(itms.sublist(0, 4)),
-                                      maxSpeed: 20,
-                                      size: 50,
-                                    )
+                                  if (itms.length >= 3)
+                                    AnimatedOpacity(
+                                        opacity: _sportMode ? 1.0 : 0.0,
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        child: SpeedGauge(
+                                          speed:
+                                              lastRunSpeed(itms.sublist(0, 4)),
+                                          maxSpeed: 20,
+                                          size: 50,
+                                        ))
                                 ],
                               ),
                             ),
