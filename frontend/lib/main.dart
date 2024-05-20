@@ -102,6 +102,7 @@ class MyAppState extends State<MyApp> {
     await FlutterForegroundTask.stopService();
     FlutterForegroundTask.init(
         androidNotificationOptions: AndroidNotificationOptions(
+            foregroundServiceType: AndroidForegroundServiceType.DATA_SYNC,
             channelId: 'tesou',
             channelName: 'tesou',
             channelDescription: 'tesou location service',

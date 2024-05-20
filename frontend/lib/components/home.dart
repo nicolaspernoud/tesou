@@ -325,9 +325,11 @@ class HomeState extends State<Home>
                                       ),
                                     ],
                                   ),
-                                  if (itms.length >= 3)
+                                  if (itms.length >= 4)
                                     AnimatedOpacity(
-                                        opacity: _sportMode ? 1.0 : 0.0,
+                                        opacity: itms.elementAt(0).sportMode
+                                            ? 1.0
+                                            : 0.0,
                                         duration:
                                             const Duration(milliseconds: 300),
                                         child: SpeedGauge(
