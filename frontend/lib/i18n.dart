@@ -19,7 +19,6 @@ class MyLocalizations {
   static final Map<String, Map<String, String>> _localizedValues = {
     'en': {
       "active_user": "Active user",
-      "and_enter_token": "and enter the token",
       "edit_user": "Edit user",
       "enable_log": "Enable Logging",
       "get_latest_release": "Get latest release from GitHub",
@@ -45,7 +44,6 @@ class MyLocalizations {
     },
     'fr': {
       "active_user": "Utilisateur actif",
-      "and_enter_token": "et saisir le jeton",
       "edit_user": "Éditer utilisateur",
       "enable_log": "Activer le journal",
       "get_latest_release": "Récupérer la dernière version sur GitHub",

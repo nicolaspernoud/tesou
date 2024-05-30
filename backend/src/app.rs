@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
+use actix_web::error::ErrorForbidden;
 use actix_web::http::Method;
 use actix_web::{dev::ServiceRequest, Error};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
@@ -70,15 +70,21 @@ pub async fn validator(
             req,
         ));
     }
-    let (ok, reason) = check_share_token(credentials.token(), &main_token);
+    let params = query_string_to_hashmap(req.query_string());
+    let user_id = params.get("user_id");
+    let (ok, reason) = check_share_token(credentials.token(), &main_token, user_id);
     if ok {
         Ok(req)
     } else {
-        Err((ErrorUnauthorized(reason), req))
+        Err((ErrorForbidden(reason), req))
     }
 }
 
-pub fn check_share_token(base64_token: &str, main_token: &str) -> (bool, &'static str) {
+pub fn check_share_token(
+    base64_token: &str,
+    main_token: &str,
+    user_id: Option<&String>,
+) -> (bool, &'static str) {
     // TRY TO DECRYPT THE TOKEN
     // Get the token as base64
     debug!("Getting token, base64 token = {:?}", base64_token);
@@ -106,14 +112,23 @@ pub fn check_share_token(base64_token: &str, main_token: &str) -> (bool, &'stati
             return (false, "could not decipher token data");
         }
     };
+    // Split the data to recover the time and the user id
+    let (time_data, id) = data.split_at(8);
     // Convert it to a duration (since unix epoch, little endian)
-    let data: [u8; 8] = match data.try_into() {
+    let time_data: [u8; 8] = match time_data.try_into() {
         Ok(val) => val,
         Err(_) => {
-            return (false, "could not convert data to time");
+            return (false, "could not extract time from data");
         }
     };
-    let token_time = u64::from_le_bytes(data);
+    let token_time = u64::from_le_bytes(time_data);
+    let id: [u8; 2] = match id.try_into() {
+        Ok(val) => val,
+        Err(_) => {
+            return (false, "could not extract user id from data");
+        }
+    };
+    let id = u16::from_le_bytes(id);
     // Get the current time
     let time = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(val) => val.as_secs(),
@@ -125,6 +140,12 @@ pub fn check_share_token(base64_token: &str, main_token: &str) -> (bool, &'stati
     if time > token_time + SHARE_TOKEN_DURATION {
         return (false, "token is expired");
     }
+    // Check the user id
+    if let Some(user_id) = user_id.map(|x| x.parse::<u16>().unwrap_or(0)) {
+        if user_id != id {
+            return (false, "user ids don't match");
+        }
+    }
     (true, "")
 }
 
@@ -135,7 +156,7 @@ macro_rules! create_app {
         use actix_web::dev::Service;
         use actix_web::{error::InternalError, middleware, web, web::Data, App, HttpResponse};
         use actix_web_httpauth::middleware::HttpAuthentication;
-        use std::collections::HashMap;
+        use $crate::app::query_string_to_hashmap;
         use $crate::models::position_ws::{connect, count};
         use $crate::models::{position, user};
         use $crate::token;
@@ -164,7 +185,7 @@ macro_rules! create_app {
                     .service(user::delete),
             )
             .service(
-                web::resource("/api/positions/ws/{user_id}")
+                web::resource("/api/positions/ws")
                     .route(web::get().to(connect))
                     .wrap_fn(
                         |req,
@@ -184,13 +205,7 @@ macro_rules! create_app {
                                 .map(|data| &data.bearer_token);
                             if let Some(ref_token) = reference_token {
                                 // Parse the query string into a HashMap
-                                let mut params: HashMap<String, String> = HashMap::new();
-                                for pair in req.query_string().split('&') {
-                                    let mut parts = pair.splitn(2, '=');
-                                    if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-                                        params.insert(key.to_owned(), value.to_owned());
-                                    }
-                                }
+                                let params = query_string_to_hashmap(req.query_string());
                                 // Get the value of a specific parameter
                                 let query_token = match params.get("token").cloned().ok_or("") {
                                     Ok(v) => v,
@@ -202,13 +217,18 @@ macro_rules! create_app {
                                         });
                                     }
                                 };
-
+                                let query_token =
+                                    urlencoding::decode(&query_token).unwrap_or_default();
                                 if &query_token == ref_token {
                                     return srv.call(req);
                                 }
                                 // SHARE TOKEN SECTION
-                                let (ok, reason) =
-                                    $crate::app::check_share_token(&query_token, ref_token);
+                                let query_user_id = params.get("user_id");
+                                let (ok, reason) = $crate::app::check_share_token(
+                                    &query_token,
+                                    ref_token,
+                                    query_user_id,
+                                );
                                 if ok {
                                     return srv.call(req);
                                 } else {
@@ -242,4 +262,16 @@ macro_rules! create_app {
             )
             .service(actix_files::Files::new("/", "./web").index_file("index.html"))
     }};
+}
+
+pub fn query_string_to_hashmap(q_string: &str) -> HashMap<String, String> {
+    // Parse the query string into a HashMap
+    let mut params: HashMap<String, String> = HashMap::new();
+    for pair in q_string.split('&') {
+        let mut parts = pair.splitn(2, '=');
+        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+            params.insert(key.to_owned(), value.to_owned());
+        }
+    }
+    params
 }

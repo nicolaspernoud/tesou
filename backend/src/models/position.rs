@@ -161,7 +161,7 @@ pub async fn create(
             debug!("sending position to websocket actors: {:?}", ws_actors);
             ws_actors
                 .iter()
-                .filter(|e| e.user_id == created_o.user_id)
+                .filter(|e| e.user_id == created_o.user_id.try_into().unwrap_or(0))
                 .for_each(|element| {
                     element.addr.do_send(Message(created_o.clone()));
                 });
@@ -202,8 +202,10 @@ pub async fn read_filter(
             .await?
         }
         Err(_) => {
-            let mut conn = pool.get()?;
-            web::block(move || positions.order(id.asc()).load::<Position>(&mut conn)).await?
+            /*let mut conn = pool.get()?;
+            web::block(move || positions.order(id.asc()).load::<Position>(&mut conn)).await?*/
+            let res = HttpResponse::NotFound().body("No user_id provided in query");
+            return Ok(res);
         }
     };
     if let Ok(object) = object {

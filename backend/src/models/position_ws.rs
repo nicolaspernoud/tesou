@@ -12,6 +12,8 @@ use actix_web::{
 use actix_web_actors::ws;
 use log::{debug, info};
 
+use crate::token::Info;
+
 use super::position::Position;
 
 static HEARTBEAT_INTERVAL: OnceLock<Duration> = OnceLock::new();
@@ -25,7 +27,7 @@ pub struct Message(pub Position);
 pub struct PositionConnexion {
     pub addr: Addr<PositionWebSocket>,
     pub id: usize,
-    pub user_id: i32,
+    pub user_id: u16,
 }
 
 pub struct PositionWebSocket {
@@ -150,9 +152,9 @@ pub async fn connect(
     req: HttpRequest,
     stream: web::Payload,
     ws_data: web::Data<WebSocketsState>,
-    path: web::Path<i32>,
+    info: web::Query<Info>,
 ) -> Result<HttpResponse, Error> {
-    let user_id = path.into_inner();
+    let user_id = info.user_id;
     let mut id = ws_data.index.lock().unwrap();
     *id += 1;
     let actor = PositionWebSocket::new(*id, ws_data.ws_actors.clone());

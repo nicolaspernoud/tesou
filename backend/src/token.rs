@@ -10,12 +10,22 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{app::AppConfig, errors::ServerError};
 
+#[derive(serde::Deserialize)]
+pub struct Info {
+    pub user_id: u16,
+}
+
 #[get("")]
-pub async fn get(cfg: web::Data<AppConfig>) -> Result<impl Responder, ServerError> {
+pub async fn get(
+    cfg: web::Data<AppConfig>,
+    info: web::Query<Info>,
+) -> Result<impl Responder, ServerError> {
     // Get the current time
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?;
     debug!("Creating token, time = {:?}", time);
-    let time = time.as_secs().to_le_bytes();
+    let mut data = Vec::with_capacity(9);
+    data.extend_from_slice(&time.as_secs().to_le_bytes());
+    data.extend_from_slice(&info.user_id.to_le_bytes());
 
     // Get the main token
     let token = &cfg.bearer_token;
@@ -29,7 +39,7 @@ pub async fn get(cfg: web::Data<AppConfig>) -> Result<impl Responder, ServerErro
     let cipher = ChaCha20Poly1305::new(&key.into());
     let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
     debug!("Creating token, nonce = {:?}", nonce);
-    let mut ciphertext = cipher.encrypt(&nonce, time.as_ref())?;
+    let mut ciphertext = cipher.encrypt(&nonce, data.as_ref())?;
     debug!("Creating token, ciphertext = {:?}", ciphertext);
     // Prepend message with nonce
     let mut ciphered = nonce.to_vec();
@@ -57,7 +67,14 @@ pub async fn token_test(
     let mut app = test::init_service(crate::create_app!(pool, app_config, ws_state)).await;
 
     // Get a token
-    let share_token = do_test!(app, Method::GET, "/api/token", "", StatusCode::OK, "");
+    let share_token = do_test!(
+        app,
+        Method::GET,
+        "/api/token?user_id=1",
+        "",
+        StatusCode::OK,
+        ""
+    );
 
     debug!("share_token = {}", share_token);
 
@@ -69,6 +86,30 @@ pub async fn token_test(
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(resp.status(), 200);
 
+    // Try to use the share token to get the positions for the user it was created for (must pass)
+    let req = test::TestRequest::get()
+        .insert_header(("Authorization", format!("Bearer {share_token}")))
+        .uri("/api/positions?user_id=1")
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), 200);
+
+    // Try to use the share token to get positions without an user id (must fail)
+    let req = test::TestRequest::get()
+        .insert_header(("Authorization", format!("Bearer {share_token}")))
+        .uri("/api/positions")
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), 404);
+
+    // Try to use the share token to get the positions for another user that the one it was created for (must fail)
+    let req = test::TestRequest::get()
+        .insert_header(("Authorization", format!("Bearer {share_token}")))
+        .uri("/api/positions?user_id=2")
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), 403);
+
     // Try to use a random share token with a get method (must fail)
     let req = test::TestRequest::get()
         .insert_header((
@@ -78,7 +119,7 @@ pub async fn token_test(
         .uri("/api/users")
         .to_request();
     let resp = test::call_service(&mut app, req).await;
-    assert_eq!(resp.status(), 401);
+    assert_eq!(resp.status(), 403);
 
     // Try to use the share token with a method altering the data (must fail)
     let req = test::TestRequest::delete()
@@ -91,7 +132,7 @@ pub async fn token_test(
     // Try to use the share token with a get a share token (must fail)
     let req = test::TestRequest::get()
         .insert_header(("Authorization", format!("Bearer {share_token}")))
-        .uri("/api/token")
+        .uri("/api/token?user_id=1")
         .to_request();
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(resp.status(), 403);

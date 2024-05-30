@@ -179,10 +179,10 @@ class APICrud<T extends Serialisable> extends Crud<T> {
   }
 }
 
-Future<String> getShareToken() async {
+Future<String> getShareToken(int userId) async {
   try {
     final response = await http.Client().get(
-      Uri.parse('${App().prefs.hostname}/api/token'),
+      Uri.parse('${App().prefs.hostname}/api/token?user_id=$userId'),
       headers: <String, String>{
         'Authorization': "Bearer ${App().prefs.token}",
       },

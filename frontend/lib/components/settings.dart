@@ -4,6 +4,7 @@ import 'package:tesou/models/user.dart';
 import 'package:tesou/models/crud.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:tesou/globals.dart';
+import 'package:tesou/url_parser/url_parser.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../i18n.dart';
 import 'new_user.dart';
@@ -43,11 +44,11 @@ class SettingsState extends State<Settings> {
             icon: const Icon(Icons.share),
             tooltip: tr(context, "share_my_position"),
             onPressed: () async {
-              var token = await getShareToken();
-               if (!context.mounted) return;
+              var token = await getShareToken(App().prefs.userId);
+              if (!context.mounted) return;
               Clipboard.setData(ClipboardData(
                   text:
-                      "${tr(context, "go_to")}\n\n${App().prefs.hostname}\n\n${tr(context, "and_enter_token")}\n\n$token"));
+                      "${tr(context, "go_to")}\n\n${App().prefs.hostname.isNotEmpty ? App().prefs.hostname : getOrigin()}?token=${Uri.encodeComponent(token)}&user=${App().prefs.userId}"));
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content:
                       Text(tr(context, "share_info_copied_to_clipboard"))));
@@ -90,29 +91,27 @@ class SettingsState extends State<Settings> {
                     if (snapshot.hasData) {
                       return Column(
                         children: [
-                          ...snapshot.data!
-                              .map((a) => Card(
-                                      child: InkWell(
-                                    splashColor: Colors.blue.withAlpha(30),
-                                    onTap: () {
-                                      _editUser(a);
-                                    },
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: <Widget>[
-                                        ListTile(
-                                          leading: (App().prefs.userId == a.id)
-                                              ? const Icon(
-                                                  Icons.radio_button_checked)
-                                              : const Icon(
-                                                  Icons.radio_button_unchecked),
-                                          title: Text(a.name),
-                                          subtitle: Text(a.surname),
-                                        ),
-                                      ],
+                          ...snapshot.data!.map((a) => Card(
+                                  child: InkWell(
+                                splashColor: Colors.blue.withAlpha(30),
+                                onTap: () {
+                                  _editUser(a);
+                                },
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    ListTile(
+                                      leading: (App().prefs.userId == a.id)
+                                          ? const Icon(
+                                              Icons.radio_button_checked)
+                                          : const Icon(
+                                              Icons.radio_button_unchecked),
+                                      title: Text(a.name),
+                                      subtitle: Text(a.surname),
                                     ),
-                                  )))
-                              ,
+                                  ],
+                                ),
+                              ))),
                           Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: IconButton(

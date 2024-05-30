@@ -39,7 +39,7 @@ pub async fn position_test(
         .to_request();
     use actix_web::dev::Service;
     let resp = app.call(req).await.unwrap();
-    assert_eq!(resp.status(), 401);
+    assert_eq!(resp.status(), 403);
     let body = test::read_body(resp).await;
     let body = std::str::from_utf8(&body).unwrap().to_string();
     assert_eq!(body, "Wrong token!");
@@ -195,7 +195,7 @@ pub async fn position_test(
     do_test!(
         app,
         Method::GET,
-        "/api/positions",
+        &format!("/api/positions?user_id={user_id}"),
         "",
         StatusCode::OK,
         format!(

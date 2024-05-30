@@ -13,6 +13,7 @@ import 'package:tesou/models/user.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:tesou/models/preferences.dart';
+import 'package:tesou/url_parser/url_parser.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -31,12 +32,15 @@ class Home extends StatefulWidget {
 
   final Function foregroundTaskCommand;
 
+  final SharedPosition? sharedPosition;
+
   const Home(
       {super.key,
       required this.crud,
       required this.usersCrud,
       required this.title,
-      required this.foregroundTaskCommand});
+      required this.foregroundTaskCommand,
+      this.sharedPosition});
 
   @override
   HomeState createState() => HomeState();
@@ -58,6 +62,10 @@ class HomeState extends State<Home>
   @override
   void initState() {
     super.initState();
+    if (widget.sharedPosition != null) {
+      displayedUser = widget.sharedPosition!.shareUserId;
+      App().prefs.token = widget.sharedPosition!.shareToken;
+    }
     if (App().hasToken) {
       getData();
     } else {
@@ -214,7 +222,6 @@ class HomeState extends State<Home>
                                   minZoom: 0,
                                   maxZoom: 18,
                                   interactionOptions: const InteractionOptions(
-                                    enableScrollWheel: true,
                                     flags: InteractiveFlag.all &
                                         ~InteractiveFlag.rotate,
                                   ),
@@ -357,63 +364,65 @@ class HomeState extends State<Home>
                 ),
               ))
             : null,
-        bottomNavigationBar: StickyBottomAppBar(
-          child: BottomAppBar(
-              child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (!kIsWeb) ...[
-                  IconButton(
-                      icon: _sportMode
-                          ? const CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.pink,
-                              child: Icon(Icons.directions_run,
-                                  color: Colors.white),
-                            )
-                          : const Icon(Icons.directions_walk),
-                      onPressed: () async {
-                        setState(() {
-                          kms = 0;
-                          _sportMode = !_sportMode;
-                        });
-                        widget.foregroundTaskCommand(_sportMode);
-                      }),
-                  if (!_sportMode)
-                    IconButton(
-                        icon: const Icon(Icons.my_location),
-                        onPressed: () async {
-                          try {
-                            await getPositionAndPushToServer(false);
+        bottomNavigationBar: widget.sharedPosition != null
+            ? null
+            : StickyBottomAppBar(
+                child: BottomAppBar(
+                    child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (!kIsWeb) ...[
+                        IconButton(
+                            icon: _sportMode
+                                ? const CircleAvatar(
+                                    radius: 40,
+                                    backgroundColor: Colors.pink,
+                                    child: Icon(Icons.directions_run,
+                                        color: Colors.white),
+                                  )
+                                : const Icon(Icons.directions_walk),
+                            onPressed: () async {
+                              setState(() {
+                                kms = 0;
+                                _sportMode = !_sportMode;
+                              });
+                              widget.foregroundTaskCommand(_sportMode);
+                            }),
+                        if (!_sportMode)
+                          IconButton(
+                              icon: const Icon(Icons.my_location),
+                              onPressed: () async {
+                                try {
+                                  await getPositionAndPushToServer(false);
+                                  await getDataAndMoveToLastPosition();
+                                } catch (_) {}
+                              }),
+                      ],
+                      IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: () async {
                             await getDataAndMoveToLastPosition();
-                          } catch (_) {}
-                        }),
-                ],
-                IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () async {
-                      await getDataAndMoveToLastPosition();
-                    }),
-                IconButton(
-                    icon: const Icon(Icons.timeline),
-                    onPressed: () async {
-                      await openFilePickerAndReadTrace();
-                    }),
-                if (App().hasToken)
-                  UsersDropdown(
-                    users: users,
-                    callback: (val) async {
-                      displayedUser = val;
-                      await getDataAndMoveToLastPosition();
-                    },
-                    initialIndex: 1,
+                          }),
+                      IconButton(
+                          icon: const Icon(Icons.timeline),
+                          onPressed: () async {
+                            await openFilePickerAndReadTrace();
+                          }),
+                      if (App().hasToken)
+                        UsersDropdown(
+                          users: users,
+                          callback: (val) async {
+                            displayedUser = val;
+                            await getDataAndMoveToLastPosition();
+                          },
+                          initialIndex: 1,
+                        ),
+                    ],
                   ),
-              ],
-            ),
-          )),
-        ));
+                )),
+              ));
   }
 
   Future<void> getDataAndMoveToLastPosition() async {
@@ -440,7 +449,7 @@ class HomeState extends State<Home>
         websocketUrl = App().prefs.hostname.replaceFirst("http", "ws");
       }
       websocketUrl +=
-          "/api/positions/ws/$displayedUser?token=${App().prefs.token}";
+          "/api/positions/ws?user_id=$displayedUser&token=${Uri.encodeComponent(App().prefs.token)}";
       wsChannel = WebSocketChannel.connect(Uri.parse(websocketUrl));
       wsChannel?.stream.listen((message) async {
         Position pos = Position.fromJson(json.decode((message)));

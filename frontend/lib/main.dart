@@ -17,6 +17,8 @@ import 'models/position.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'url_parser/url_parser.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await App().init();
@@ -154,11 +156,15 @@ class MyAppState extends State<MyApp> {
     _receivePort = null;
   }
 
+  SharedPosition? sharedPosition;
+
   @override
   initState() {
     super.initState();
     if (!kIsWeb) {
       _startForegroundTask(false);
+    } else {
+      sharedPosition = SharedPosition.fromUrl();
     }
   }
 
@@ -193,6 +199,7 @@ class MyAppState extends State<MyApp> {
         title: 'Tesou!',
         usersCrud: userCrud,
         foregroundTaskCommand: _startForegroundTask,
+        sharedPosition: sharedPosition
       )),
       localizationsDelegates: const [
         MyLocalizationsDelegate(),

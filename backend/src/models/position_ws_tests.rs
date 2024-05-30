@@ -32,7 +32,7 @@ pub async fn position_ws_test(
 
     // Check that using the wrong token gives an unauthorized error on websockets endpoint
     let mut resp = app
-        .get(&format!("/api/positions/ws/{user_id}?token=0102"))
+        .get(&format!("/api/positions/ws?user_id={user_id}&token=0102"))
         .send()
         .await
         .unwrap();
@@ -43,7 +43,7 @@ pub async fn position_ws_test(
 
     // Open a websocket connection and wait for receiving a position update
     let (_resp, mut connection) = awc::Client::new()
-        .ws(app.url(&format!("/api/positions/ws/{user_id}?token=0101")))
+        .ws(app.url(&format!("/api/positions/ws?user_id={user_id}&token=0101")))
         .connect()
         .await
         .unwrap();
@@ -87,7 +87,7 @@ pub async fn position_ws_test(
 
     // Connect another websocket client
     let (_resp, mut connection2) = awc::Client::new()
-        .ws(app.url(&format!("/api/positions/ws/{user_id}?token=0101")))
+        .ws(app.url(&format!("/api/positions/ws?user_id={user_id}&token=0101")))
         .connect()
         .await
         .unwrap();
@@ -140,7 +140,7 @@ pub async fn position_ws_test(
     // Get a share token
     // Get a token
     let share_token = std::str::from_utf8(
-        &app.get("/api/token")
+        &app.get(format!("/api/token?user_id={user_id}"))
             .bearer_auth("0101")
             .send()
             .await
@@ -151,8 +151,11 @@ pub async fn position_ws_test(
     )
     .unwrap()
     .to_string();
+    let share_token = urlencoding::encode(&share_token);
     let (_resp, mut connection) = awc::Client::new()
-        .ws(app.url(&format!("/api/positions/ws/{user_id}?token={share_token}")))
+        .ws(app.url(&format!(
+            "/api/positions/ws?user_id={user_id}&token={share_token}"
+        )))
         .connect()
         .await
         .unwrap();

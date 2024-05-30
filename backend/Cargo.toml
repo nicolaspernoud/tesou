@@ -29,6 +29,7 @@ sha2 = "0.10"
 base64ct = { version = "1.5.3", features = ["alloc"] }
 [target.'cfg(unix)'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
+urlencoding = "2.1.3"
 
 [dev-dependencies]
 futures = "0.3"
