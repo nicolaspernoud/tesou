@@ -33,7 +33,7 @@ dependencies:
   equatable: ^2.0.5
   flutter:
     sdk: flutter
-  flutter_foreground_task: ^6.0.0
+  flutter_foreground_task: ^8.8.1+1
   flutter_localizations:
     sdk: flutter
   flutter_map: ^7.0.0
@@ -48,7 +48,10 @@ dependencies:
   web_socket_channel: ^3.0.0
   geoxml: ^2.5.2
   file_picker: ^8.0.3
-  flutter_beep: ^1.0.0
+  # TEMPORARY
+  flutter_beep:
+    git:
+      url: https://github.com/jhonathanqz/flutter_beep.git
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.0
