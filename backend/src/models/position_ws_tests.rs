@@ -5,25 +5,42 @@ use crate::{
     create_app,
     models::{
         position::Position,
-        position_ws::CLIENT_TIMEOUT,
         user::{NewUser, User},
     },
+    positions_handler::CLIENT_TIMEOUT,
+    positions_server::PositionsServerHandle,
 };
 use actix_web::web::Bytes;
 use futures::{SinkExt as _, StreamExt as _};
 use tokio::time::sleep;
 
-use super::position_ws::WebSocketsState;
+macro_rules! next_text_message {
+    ($connection:expr) => {{
+        let response = loop {
+            let response = $connection.next().await.unwrap().unwrap();
+            let response = match response {
+                awc::ws::Frame::Text(t) => std::str::from_utf8(&t).unwrap().to_string(),
+                awc::ws::Frame::Ping(_) => {
+                    continue;
+                }
+                awc::ws::Frame::Close(_) => panic!("Connection closed"),
+                _ => panic!("Not a text frame"),
+            };
+            break response;
+        };
+        response
+    }};
+}
 
 pub async fn position_ws_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
     app_config: &actix_web::web::Data<AppConfig>,
-    ws_state: &actix_web::web::Data<WebSocketsState>,
+    position_server_handle: &PositionsServerHandle,
 ) {
     let pool = pool.clone();
     let app_config = app_config.clone();
-    let ws_state = ws_state.clone();
-    let app = actix_test::start(move || create_app!(&pool, &app_config, &ws_state));
+    let position_server_handle = position_server_handle.clone();
+    let app = actix_test::start(move || create_app!(&pool, &app_config, &position_server_handle));
 
     std::env::set_var("HEARTBEAT_INTERVAL", "3");
 
@@ -32,7 +49,7 @@ pub async fn position_ws_test(
 
     // Check that using the wrong token gives an unauthorized error on websockets endpoint
     let mut resp = app
-        .get(&format!("/api/positions/ws?user_id={user_id}&token=0102"))
+        .get(format!("/api/positions/ws?user_id={user_id}&token=0102"))
         .send()
         .await
         .unwrap();
@@ -62,11 +79,7 @@ pub async fn position_ws_test(
         user_id
     )).await.unwrap().json::<Position>().await.unwrap();
 
-    let response = connection.next().await.unwrap().unwrap();
-    let response = match response {
-        awc::ws::Frame::Text(t) => std::str::from_utf8(&t).unwrap().to_string(),
-        _ => panic!("Not a text frame"),
-    };
+    let response = next_text_message!(connection);
     assert!(response.contains("latitude"));
 
     // Create a position for another user
@@ -101,25 +114,14 @@ pub async fn position_ws_test(
     test_connected(&app, 2).await;
 
     // Check that both connexions get the new position
-    let response = connection.next().await.unwrap().unwrap();
-    let response = match response {
-        awc::ws::Frame::Text(t) => std::str::from_utf8(&t).unwrap().to_string(),
-        _ => panic!("Not a text frame"),
-    };
+    let response = next_text_message!(connection);
     assert!(response.contains("12345"));
 
-    let response = connection2.next().await.unwrap().unwrap();
-    let response = match response {
-        awc::ws::Frame::Text(t) => std::str::from_utf8(&t).unwrap().to_string(),
-        _ => panic!("Not a text frame"),
-    };
+    let response = next_text_message!(connection2);
     assert!(response.contains("12345"));
 
     // Wait for connexions timeout
-    let client_timeout = CLIENT_TIMEOUT
-        .get_or_init(|| Duration::from_secs(0))
-        .to_owned();
-    sleep(client_timeout.add(Duration::from_secs(2))).await;
+    sleep(CLIENT_TIMEOUT.add(Duration::from_secs(2))).await;
 
     // Check that connexions were closed
     loop {
@@ -165,16 +167,12 @@ pub async fn position_ws_test(
         .await
         .unwrap();
 
-    let response = connection.next().await.unwrap().unwrap();
-    assert_eq!(
-        response,
-        awc::ws::Frame::Text("Echo with share token".into())
-    );
+    let response = next_text_message!(connection);
+    assert_eq!(response, "Echo with share token");
 }
 
 async fn create_user(app: &actix_test::TestServer) -> i32 {
-    let user_id = app
-        .post("/api/users")
+    app.post("/api/users")
         .bearer_auth("0101")
         .send_json(&NewUser {
             name: "user".to_owned(),
@@ -185,8 +183,7 @@ async fn create_user(app: &actix_test::TestServer) -> i32 {
         .json::<User>()
         .await
         .unwrap()
-        .id;
-    user_id
+        .id
 }
 
 async fn test_connected(app: &actix_test::TestServer, nb: usize) {

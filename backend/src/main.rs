@@ -4,21 +4,23 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use std::env;
-use std::sync::{Arc, Mutex};
 
 use actix_web::web::Data;
 use actix_web::HttpServer;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
+use positions_server::PositionsServer;
+use tokio::{spawn, try_join};
 
 use crate::app::AppConfig;
-use crate::models::position_ws::WebSocketsState;
 
 mod app;
 mod db_options;
 mod errors;
 mod models;
+mod positions_handler;
+mod positions_server;
 mod schema;
 #[cfg(test)]
 pub mod tester;
@@ -67,15 +69,17 @@ async fn main() -> std::io::Result<()> {
     // Data should be constructed outside the HttpServer::new closure if shared, potentially mutable state is desired...
     let app_config = Data::new(app_config);
     let bind = "0.0.0.0:8080";
-    let ws_state = WebSocketsState {
-        index: Mutex::new(0),
-        ws_actors: Arc::new(Mutex::new(Vec::new())),
-    };
-    let ws_state = Data::new(ws_state);
+
+    // Positions server
+    let (positions_server, server_tx) = PositionsServer::new();
+    let positions_server = spawn(positions_server.run());
 
     // Start HTTP server
-    HttpServer::new(move || create_app!(pool, &app_config, &ws_state))
+    let http_server = HttpServer::new(move || create_app!(pool, &app_config, &server_tx))
         .bind(&bind)?
-        .run()
-        .await
+        .run();
+
+    try_join!(http_server, async move { positions_server.await.unwrap() })?;
+
+    Ok(())
 }

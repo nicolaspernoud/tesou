@@ -1,6 +1,5 @@
 pub(crate) mod crud;
 pub(crate) mod position;
-pub(crate) mod position_ws;
 pub(crate) mod user;
 
 #[cfg(test)]

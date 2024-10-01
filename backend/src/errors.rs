@@ -96,3 +96,15 @@ impl From<chacha20poly1305::Error> for ServerError {
         ServerError::Other("could not perform chacha20poly1305 operation".to_owned())
     }
 }
+
+impl From<std::num::TryFromIntError> for ServerError {
+    fn from(_: std::num::TryFromIntError) -> ServerError {
+        ServerError::Other("could not convert value from integer".to_owned())
+    }
+}
+
+impl From<serde_json::Error> for ServerError {
+    fn from(_: serde_json::Error) -> ServerError {
+        ServerError::Other("could not marshall the value to json".to_owned())
+    }
+}

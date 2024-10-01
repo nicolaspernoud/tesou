@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use actix_web::error::ErrorForbidden;
 use actix_web::http::Method;
 use actix_web::{dev::ServiceRequest, Error};
@@ -151,13 +150,14 @@ pub fn check_share_token(
 
 #[macro_export]
 macro_rules! create_app {
-    ($pool:expr, $app_config:expr, $ws_state:expr) => {{
+    ($pool:expr, $app_config:expr, $positions_server_tx:expr) => {{
+        use crate::positions_handler::count;
+        use crate::positions_handler::positions_ws_handler;
         use actix_cors::Cors;
         use actix_web::dev::Service;
         use actix_web::{error::InternalError, middleware, web, web::Data, App, HttpResponse};
         use actix_web_httpauth::middleware::HttpAuthentication;
         use $crate::app::query_string_to_hashmap;
-        use $crate::models::position_ws::{connect, count};
         use $crate::models::{position, user};
         use $crate::token;
 
@@ -171,7 +171,7 @@ macro_rules! create_app {
                     }),
             )
             .app_data(Data::clone($app_config))
-            .app_data(Data::clone($ws_state))
+            .app_data(Data::new($positions_server_tx.clone()))
             .wrap(Cors::permissive())
             .wrap(middleware::Logger::default())
             .service(
@@ -186,7 +186,7 @@ macro_rules! create_app {
             )
             .service(
                 web::resource("/api/positions/ws")
-                    .route(web::get().to(connect))
+                    .route(web::get().to(positions_ws_handler))
                     .wrap_fn(
                         |req,
                          srv|

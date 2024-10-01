@@ -2,7 +2,7 @@
 macro_rules! do_test {
     ($app:expr, $method:expr, $uri:expr, $payload:expr, $expected_status_code:expr, $body_expect_to_start_with:expr) => {{
         let serialized: String;
-        let ptype = crate::tester::type_of($payload);
+        let ptype = $crate::tester::type_of($payload);
         println!("Payload type: {}", ptype);
         if ptype == "&str" || ptype == "&alloc::string::String" {
             serialized = $payload.to_string();

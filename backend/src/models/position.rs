@@ -1,11 +1,13 @@
-use crate::models::position_ws::{Message, WebSocketsState};
 use actix_web::HttpRequest;
-use log::debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::AppConfig, crud_delete, crud_delete_all, crud_read, crud_update, crud_use,
-    errors::ServerError, models::user::User, schema::positions, schema::positions::dsl::*,
+    app::AppConfig,
+    crud_delete, crud_delete_all, crud_read, crud_update, crud_use,
+    errors::ServerError,
+    models::user::User,
+    positions_server::PositionsServerHandle,
+    schema::positions::{self, dsl::*},
 };
 
 const MINIMUM_TIME_GAP: i64 = 1000;
@@ -127,7 +129,7 @@ pub async fn create(
     pool: web::Data<DbPool>,
     o: web::Json<Vec<NewPosition>>,
     cfg: web::Data<AppConfig>,
-    ws_data: web::Data<WebSocketsState>,
+    ws_data: web::Data<PositionsServerHandle>,
 ) -> Result<HttpResponse, ServerError> {
     let mut hm = cfg.user_last_update.lock().await;
     // Filter the positions : remove those that have a timestamp too close to the last update or too close together
@@ -157,14 +159,12 @@ pub async fn create(
     {
         Ok(created_o) => {
             update_last_timestamp!(hm, created_o);
-            let ws_actors = ws_data.ws_actors.lock().unwrap();
-            debug!("sending position to websocket actors: {:?}", ws_actors);
-            ws_actors
-                .iter()
-                .filter(|e| e.user_id == created_o.user_id.try_into().unwrap_or(0))
-                .for_each(|element| {
-                    element.addr.do_send(Message(created_o.clone()));
-                });
+            ws_data
+                .send_message(
+                    created_o.user_id.try_into()?,
+                    serde_json::to_string(&created_o)?,
+                )
+                .await;
             Ok(HttpResponse::Created().json(created_o))
         }
         Err(e) => match e {

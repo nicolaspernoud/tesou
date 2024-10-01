@@ -1,16 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
-
     use actix_web::web::Data;
     use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
+    use tokio::spawn;
 
     use crate::{
         app::AppConfig,
         models::{
-            position_tests::position_test, position_ws::WebSocketsState,
-            position_ws_tests::position_ws_test, user_tests::user_test,
+            position_tests::position_test, position_ws_tests::position_ws_test,
+            user_tests::user_test,
         },
+        positions_server::PositionsServer,
         token::token_test,
     };
     #[actix_rt::test]
@@ -34,15 +34,15 @@ mod tests {
         // Set up authorization token
         let app_config = AppConfig::new("0101".to_string(), "0202".to_string());
         let app_data = Data::new(app_config);
-        let ws_state = WebSocketsState {
-            index: Mutex::new(0),
-            ws_actors: Arc::new(Mutex::new(Vec::new())),
-        };
-        let ws_state = Data::new(ws_state);
+        let (positions_server, server_tx) = PositionsServer::new();
+        let positions_server = spawn(positions_server.run());
 
-        user_test(&pool, &app_data, &ws_state).await;
-        position_test(&pool, &app_data, &ws_state).await;
-        token_test(&pool, &app_data, &ws_state).await;
-        position_ws_test(&pool, &app_data, &ws_state).await;
+        user_test(&pool, &app_data, &server_tx).await;
+        position_test(&pool, &app_data, &server_tx).await;
+        token_test(&pool, &app_data, &server_tx).await;
+        tokio::select! {
+            _ = position_ws_test(&pool, &app_data, &server_tx) => {}
+            _ = positions_server => {}
+        };
     }
 }

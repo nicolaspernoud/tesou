@@ -1,11 +1,9 @@
-use crate::{app::AppConfig, create_app};
-
-use super::position_ws::WebSocketsState;
+use crate::{app::AppConfig, create_app, positions_server::PositionsServerHandle};
 
 pub async fn user_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
     app_config: &actix_web::web::Data<AppConfig>,
-    ws_state: &actix_web::web::Data<WebSocketsState>,
+    position_server_handle: &PositionsServerHandle,
 ) {
     use crate::{do_test, do_test_extract_id};
     use actix_web::{
@@ -13,7 +11,7 @@ pub async fn user_test(
         test,
     };
 
-    let mut app = test::init_service(create_app!(pool, app_config, ws_state)).await;
+    let mut app = test::init_service(create_app!(pool, app_config, position_server_handle)).await;
 
     // Delete all the users
     let req = test::TestRequest::delete()
