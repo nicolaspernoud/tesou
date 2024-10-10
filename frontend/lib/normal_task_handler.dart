@@ -3,7 +3,7 @@ import 'package:tesou/models/new_position.dart';
 
 class NormalTaskHandler extends TaskHandler {
   @override
-  void onStart(DateTime timestamp) {}
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
 
   @override
   void onRepeatEvent(DateTime timestamp) {
@@ -11,7 +11,7 @@ class NormalTaskHandler extends TaskHandler {
   }
 
   @override
-  void onDestroy(DateTime timestamp) {
+  Future<void> onDestroy(DateTime timestamp) async {
     FlutterForegroundTask.clearAllData();
   }
 
@@ -19,5 +19,4 @@ class NormalTaskHandler extends TaskHandler {
   void onNotificationPressed() {
     FlutterForegroundTask.launchApp('/');
   }
-
 }

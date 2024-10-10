@@ -29,33 +29,33 @@ environment:
 dependencies:
   aosp_location:
     path: aosp_location
-  cupertino_icons: ^1.0.5
+  cupertino_icons: ^1.0.8
   equatable: ^2.0.5
   flutter:
     sdk: flutter
-  flutter_foreground_task: ^8.8.1+1
+  flutter_foreground_task: ^8.10.4
   flutter_localizations:
     sdk: flutter
-  flutter_map: ^7.0.0
+  flutter_map: ^7.0.2
   intl: ^0.19.0
-  html: ^0.15.0
-  http: ^1.1.0
-  latlong2: ^0.9.0
-  path_provider: ^2.0.11
-  permission_handler: ^11.0.0
-  shared_preferences: ^2.0.15
-  url_launcher: ^6.1.6
-  web_socket_channel: ^3.0.0
-  geoxml: ^2.5.2
-  file_picker: ^8.0.3
+  html: ^0.15.4
+  http: ^1.2.2
+  latlong2: ^0.9.1
+  path_provider: ^2.1.4
+  permission_handler: ^11.3.1
+  shared_preferences: ^2.3.2
+  url_launcher: ^6.3.1
+  web_socket_channel: ^3.0.1
+  geoxml: ^2.6.1
+  file_picker: ^8.1.2
   # TEMPORARY
   flutter_beep:
     git:
-      url: https://github.com/jhonathanqz/flutter_beep.git
+      url: https://github.com/trietho/flutter_beep.git
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.13.0
-  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+  flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
 

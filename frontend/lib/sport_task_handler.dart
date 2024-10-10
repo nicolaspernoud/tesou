@@ -9,7 +9,7 @@ class SportTaskHandler extends TaskHandler {
   StreamSubscription<String>? _streamSubscription;
 
   @override
-  void onStart(DateTime timestamp) async {
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     await App().log("Starting positions stream...");
     final positionStream = AospLocation.instance.getPositionStream;
     _streamSubscription = positionStream.listen((event) async {
