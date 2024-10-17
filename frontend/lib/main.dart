@@ -79,6 +79,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title:'Tesou!',
       theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.green,
