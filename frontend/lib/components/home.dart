@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_beep/flutter_beep.dart';
+import 'package:flutter_map_geojson/flutter_map_geojson.dart';
 import 'package:geoxml/geoxml.dart';
 import 'package:tesou/components/speed_gauge.dart';
 import 'package:tesou/components/users_dropdown.dart';
@@ -55,9 +56,11 @@ class HomeState extends State<Home>
   bool _sportMode = false;
   WebSocketChannel? wsChannel;
   final stopwatch = Stopwatch();
-  List<LatLng>? trace;
+  List<Polyline>? trace;
   bool closeToTrace = false;
   int kms = 0;
+  GeoJsonParser geoJsonParser = GeoJsonParser(
+      defaultPolylineColor: Colors.green, defaultPolylineStroke: 6.0);
 
   @override
   void initState() {
@@ -270,11 +273,7 @@ class HomeState extends State<Home>
                                   // Draw a line with the last positions coming from GPS
                                   PolylineLayer(
                                     polylines: [
-                                      if (trace != null)
-                                        Polyline(
-                                            points: trace!,
-                                            strokeWidth: 6.0,
-                                            color: Colors.green),
+                                      if (trace != null) ...trace!,
                                       Polyline(
                                           points: itms
                                               .where((e) => e.time.isAfter(
@@ -529,15 +528,31 @@ class HomeState extends State<Home>
       FilePickerResult? result = await FilePicker.platform
           .pickFiles(type: FileType.any, withData: true);
 
-      if (result != null) {
+      if (result != null && result.files.single.extension != null) {
         String fileContent = String.fromCharCodes(result.files.single.bytes!);
-        var traceXml = await GeoXml.fromGpxString(fileContent);
-
-        setState(() {
-          trace = traceXml.trks[0].trksegs[0].trkpts
-              .map((e) => LatLng(e.lat!, e.lon!))
-              .toList();
-        });
+        switch (result.files.single.extension!.toLowerCase()) {
+          case 'gpx':
+            var traceXml = await GeoXml.fromGpxString(fileContent);
+            setState(() {
+              trace = traceXml.trks[0].trksegs
+                  .map((segment) => Polyline(
+                      points: segment.trkpts
+                          .map((e) => LatLng(e.lat!, e.lon!))
+                          .toList(),
+                      strokeWidth: 6.0,
+                      color: Colors.green))
+                  .toList();
+            });
+          case 'json':
+            geoJsonParser.parseGeoJsonAsString(fileContent);
+            setState(() {
+              trace = geoJsonParser.polylines;
+            });
+          default:
+            setState(() {
+              trace = null;
+            });
+        }
       } else {
         setState(() {
           trace = null;
