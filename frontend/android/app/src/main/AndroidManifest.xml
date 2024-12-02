@@ -13,6 +13,9 @@
                 android:foregroundServiceType="dataSync|location"
                 android:exported="false"
             />
+        <meta-data
+            android:name="fr.ninico.tesou.NOTIFICATION_ICON"
+            android:resource="@mipmap/ic_notification" />
     </application>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

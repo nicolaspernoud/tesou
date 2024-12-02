@@ -1,5 +1,22 @@
 use crate::{app::AppConfig, create_app, positions_server::PositionsServerHandle};
 
+impl std::fmt::Display for crate::models::position::Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "
+            id: {}\n
+            user_id: {}\n
+            time: {}\n
+            latitude: {}\n
+            longitude: {}\n
+            source: {}\n
+            ",
+            self.id, self.user_id, self.time, self.latitude, self.longitude, self.source
+        )
+    }
+}
+
 pub async fn position_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
     app_config: &actix_web::web::Data<AppConfig>,
@@ -12,23 +29,6 @@ pub async fn position_test(
     };
 
     let mut app = test::init_service(create_app!(pool, app_config, position_server_handle)).await;
-
-    impl std::fmt::Display for crate::models::position::Position {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                "
-                id: {}\n
-                user_id: {}\n
-                time: {}\n
-                latitude: {}\n
-                longitude: {}\n
-                source: {}\n
-                ",
-                self.id, self.user_id, self.time, self.latitude, self.longitude, self.source
-            )
-        }
-    }
 
     // Check that using the wrong token gives an unauthorized error
     let req = test::TestRequest::with_uri("/api/positions")

@@ -311,7 +311,9 @@ class HomeState extends State<Home>
                                             padding: const EdgeInsets.symmetric(
                                                 vertical: 5, horizontal: 10),
                                             decoration: BoxDecoration(
-                                                color: Colors.grey.shade50,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .surface,
                                                 borderRadius:
                                                     const BorderRadius.vertical(
                                                   top: Radius.circular(10),

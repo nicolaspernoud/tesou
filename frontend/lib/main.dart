@@ -79,7 +79,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title:'Tesou!',
+      title: 'Tesou!',
       theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.green,
@@ -171,10 +171,9 @@ class _MyAppState extends State<MyApp> {
         serviceId: 256,
         notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
         notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
-        notificationIcon: const NotificationIconData(
-          resType: ResourceType.mipmap,
-          resPrefix: ResourcePrefix.ic,
-          name: 'notification',
+        notificationIcon: const NotificationIcon(
+          metaDataName: 'fr.ninico.tesou.NOTIFICATION_ICON',
+          backgroundColor: Colors.green,
         ),
         callback: normalModeCallback,
       );
