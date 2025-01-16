@@ -18,7 +18,7 @@ pub async fn user_test(
         .insert_header(("Authorization", "Bearer 0101"))
         .uri("/api/users")
         .to_request();
-    test::call_service(&mut app, req).await;
+    test::call_service(&app, req).await;
 
     // Create a user
     let id = do_test_extract_id!(
@@ -88,7 +88,7 @@ pub async fn user_test(
         .insert_header(("Authorization", "Bearer 0101"))
         .uri("/api/users")
         .to_request();
-    test::call_service(&mut app, req).await;
+    test::call_service(&app, req).await;
 
     // Create two users and get them all
     let id1 = do_test_extract_id!(

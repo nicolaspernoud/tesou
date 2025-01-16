@@ -1,7 +1,6 @@
 import 'package:tesou/models/crud.dart';
-import 'package:equatable/equatable.dart';
 
-class User extends Serialisable with EquatableMixin {
+class User extends Serialisable {
   String name;
   String surname;
 
@@ -29,10 +28,17 @@ class User extends Serialisable with EquatableMixin {
   }
 
   @override
-  List<Object> get props {
-    return [id, name, surname];
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other.runtimeType != runtimeType) return false;
+    return other is User &&
+        other.id == id &&
+        other.name == name &&
+        other.surname == surname;
   }
 
   @override
-  bool get stringify => true;
+  int get hashCode {
+    return Object.hash(id, name, surname);
+  }
 }

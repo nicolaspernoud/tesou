@@ -1,10 +1,7 @@
 import 'dart:math';
-
-import 'package:equatable/equatable.dart';
-
 import 'crud.dart';
 
-class Position extends Serialisable with EquatableMixin {
+class Position extends Serialisable {
   int userId;
   double latitude;
   double longitude;
@@ -52,8 +49,23 @@ class Position extends Serialisable with EquatableMixin {
   }
 
   @override
-  List<Object> get props {
-    return [
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other.runtimeType != runtimeType) return false;
+    return other is Position &&
+        other.id == id &&
+        other.userId == userId &&
+        other.latitude == latitude &&
+        other.longitude == longitude &&
+        other.source == source &&
+        other.batteryLevel == batteryLevel &&
+        other.sportMode == sportMode &&
+        other.time == time;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
       id,
       userId,
       latitude,
@@ -61,12 +73,9 @@ class Position extends Serialisable with EquatableMixin {
       source,
       batteryLevel,
       sportMode,
-      time
-    ];
+      time,
+    );
   }
-
-  @override
-  bool get stringify => true;
 }
 
 double lastRunDuration(List<Position> positions) {

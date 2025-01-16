@@ -115,7 +115,7 @@ impl PositionsServer {
         // remove sender
         self.sessions.remove(&conn_id);
         // remove session from all users
-        for (_, sessions) in &mut self.users {
+        for sessions in self.users.values_mut() {
             sessions.remove(&conn_id);
         }
 

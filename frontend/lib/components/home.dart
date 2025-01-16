@@ -265,7 +265,7 @@ class HomeState extends State<Home>
                                                   itms.elementAt(0).latitude,
                                                   itms.elementAt(0).longitude),
                                               color:
-                                                  Colors.blue.withOpacity(0.3),
+                                                  Colors.blue.withAlpha(80),
                                               useRadiusInMeter: true,
                                               radius: 1000 // 1 km
                                               ),

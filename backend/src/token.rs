@@ -64,7 +64,8 @@ pub async fn token_test(
         test,
     };
 
-    let mut app = test::init_service(crate::create_app!(pool, app_config, position_server_handle)).await;
+    let mut app =
+        test::init_service(crate::create_app!(pool, app_config, position_server_handle)).await;
 
     // Get a token
     let share_token = do_test!(
@@ -83,7 +84,7 @@ pub async fn token_test(
         .insert_header(("Authorization", format!("Bearer {share_token}")))
         .uri("/api/users")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 200);
 
     // Try to use the share token to get the positions for the user it was created for (must pass)
@@ -91,7 +92,7 @@ pub async fn token_test(
         .insert_header(("Authorization", format!("Bearer {share_token}")))
         .uri("/api/positions?user_id=1")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 200);
 
     // Try to use the share token to get positions without an user id (must fail)
@@ -99,7 +100,7 @@ pub async fn token_test(
         .insert_header(("Authorization", format!("Bearer {share_token}")))
         .uri("/api/positions")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 404);
 
     // Try to use the share token to get the positions for another user that the one it was created for (must fail)
@@ -107,7 +108,7 @@ pub async fn token_test(
         .insert_header(("Authorization", format!("Bearer {share_token}")))
         .uri("/api/positions?user_id=2")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 403);
 
     // Try to use a random share token with a get method (must fail)
@@ -118,7 +119,7 @@ pub async fn token_test(
         ))
         .uri("/api/users")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 403);
 
     // Try to use the share token with a method altering the data (must fail)
@@ -126,7 +127,7 @@ pub async fn token_test(
         .insert_header(("Authorization", format!("Bearer {share_token}")))
         .uri("/api/users")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 403);
 
     // Try to use the share token with a get a share token (must fail)
@@ -134,6 +135,6 @@ pub async fn token_test(
         .insert_header(("Authorization", format!("Bearer {share_token}")))
         .uri("/api/token?user_id=1")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 403);
 }

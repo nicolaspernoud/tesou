@@ -151,8 +151,8 @@ pub fn check_share_token(
 #[macro_export]
 macro_rules! create_app {
     ($pool:expr, $app_config:expr, $positions_server_tx:expr) => {{
-        use crate::positions_handler::count;
-        use crate::positions_handler::positions_ws_handler;
+        use $crate::positions_handler::count;
+        use $crate::positions_handler::positions_ws_handler;
         use actix_cors::Cors;
         use actix_web::dev::Service;
         use actix_web::{error::InternalError, middleware, web, web::Data, App, HttpResponse};

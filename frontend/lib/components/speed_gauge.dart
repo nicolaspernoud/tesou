@@ -28,7 +28,7 @@ class SpeedGauge extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color:
-                      Colors.black.withOpacity(0.2), // Half-transparent color
+                      Colors.black.withAlpha(50), // Half-transparent color
                 ),
               ),
               Transform.rotate(
