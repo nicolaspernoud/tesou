@@ -11,9 +11,8 @@
         "step": {
             "user": {
                 "data": {
-                    "host": "Host",
-                    "password": "Password",
-                    "username": "Username"
+                    "host": "Host (https://tesou.****.***)",
+                    "api_token": "API Token"
                 }
             }
         }

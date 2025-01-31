@@ -90,10 +90,9 @@ class TesouApi:
                     if position["source"] == "GPS"
                 ]
                 # Find the position with the greatest ID
-                latest_gps_position = max(
+                return max(
                     gps_positions, key=lambda position: position.id, default=None
                 )
-                return latest_gps_position
             # Handle other status codes if needed
             return None
 
