@@ -4,16 +4,16 @@ use std::{
     collections::{HashMap, HashSet},
     io,
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
 };
 
-use rand::{thread_rng, Rng as _};
+use rand::{Rng, rng};
 use tokio::sync::{mpsc, oneshot};
 
 // connection ID
-pub type ConnId = usize;
+pub type ConnId = u64;
 
 // user ID
 pub type UserId = u16;
@@ -96,7 +96,7 @@ impl PositionsServer {
         log::info!("endpoint connected");
 
         // register session with random connection ID
-        let id = thread_rng().gen::<ConnId>();
+        let id = rng().random::<ConnId>();
         self.sessions.insert(id, tx);
 
         // Join the endpoints listening to the target user

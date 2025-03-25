@@ -5,8 +5,8 @@ extern crate diesel_migrations;
 
 use std::env;
 
-use actix_web::web::Data;
 use actix_web::HttpServer;
+use actix_web::web::Data;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
@@ -34,7 +34,8 @@ use log::info;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("RUST_LOG", "info") };
     }
 
     env_logger::init();

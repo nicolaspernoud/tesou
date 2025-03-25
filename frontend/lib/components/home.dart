@@ -210,6 +210,17 @@ class HomeState extends State<Home>
                     if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                       var itms = snapshot.data!;
                       itms.sort((a, b) => b.time.compareTo(a.time));
+                      var normalPoints = itms
+                          .where((e) => e.time.isAfter(DateTime.now()
+                              .subtract(const Duration(hours: 6))))
+                          .where((e) => e.source == gpsSource)
+                          .map((e) => LatLng(e.latitude, e.longitude))
+                          .toList();
+                      var runningPoints = itms
+                          .takeWhile((value) => value.sportMode)
+                          .where((e) => e.source == gpsSource)
+                          .map((e) => LatLng(e.latitude, e.longitude))
+                          .toList();
                       child = ClipRRect(
                         borderRadius: BorderRadius.circular(10.0),
                         child: Column(
@@ -264,8 +275,7 @@ class HomeState extends State<Home>
                                               point: LatLng(
                                                   itms.elementAt(0).latitude,
                                                   itms.elementAt(0).longitude),
-                                              color:
-                                                  Colors.blue.withAlpha(80),
+                                              color: Colors.blue.withAlpha(80),
                                               useRadiusInMeter: true,
                                               radius: 1000 // 1 km
                                               ),
@@ -274,30 +284,16 @@ class HomeState extends State<Home>
                                   PolylineLayer(
                                     polylines: [
                                       if (trace != null) ...trace!,
-                                      Polyline(
-                                          points: itms
-                                              .where((e) => e.time.isAfter(
-                                                  DateTime.now().subtract(
-                                                      const Duration(
-                                                          hours: 6))))
-                                              .where(
-                                                  (e) => e.source == gpsSource)
-                                              .map((e) => LatLng(
-                                                  e.latitude, e.longitude))
-                                              .toList(),
-                                          strokeWidth: 4.0,
-                                          color: Colors.blueAccent),
-                                      Polyline(
-                                          points: itms
-                                              .takeWhile(
-                                                  (value) => value.sportMode)
-                                              .where(
-                                                  (e) => e.source == gpsSource)
-                                              .map((e) => LatLng(
-                                                  e.latitude, e.longitude))
-                                              .toList(),
-                                          strokeWidth: 4.0,
-                                          color: Colors.pink),
+                                      if (normalPoints.isNotEmpty)
+                                        Polyline(
+                                            points: normalPoints,
+                                            strokeWidth: 4.0,
+                                            color: Colors.blueAccent),
+                                      if (runningPoints.isNotEmpty)
+                                        Polyline(
+                                            points: runningPoints,
+                                            strokeWidth: 4.0,
+                                            color: Colors.pink),
                                     ],
                                   ),
                                   Column(

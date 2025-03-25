@@ -1,17 +1,17 @@
-use std::collections::HashMap;
 use actix_web::error::ErrorForbidden;
 use actix_web::http::Method;
-use actix_web::{dev::ServiceRequest, Error};
+use actix_web::{Error, dev::ServiceRequest};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use base64ct::{Base64, Encoding};
 use chacha20poly1305::aead::generic_array::GenericArray;
 use chacha20poly1305::consts::U12;
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
     ChaCha20Poly1305,
+    aead::{Aead, KeyInit},
 };
 use log::debug;
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
 
@@ -151,14 +151,14 @@ pub fn check_share_token(
 #[macro_export]
 macro_rules! create_app {
     ($pool:expr, $app_config:expr, $positions_server_tx:expr) => {{
-        use $crate::positions_handler::count;
-        use $crate::positions_handler::positions_ws_handler;
         use actix_cors::Cors;
         use actix_web::dev::Service;
-        use actix_web::{error::InternalError, middleware, web, web::Data, App, HttpResponse};
+        use actix_web::{App, HttpResponse, error::InternalError, middleware, web, web::Data};
         use actix_web_httpauth::middleware::HttpAuthentication;
         use $crate::app::query_string_to_hashmap;
         use $crate::models::{position, user};
+        use $crate::positions_handler::count;
+        use $crate::positions_handler::positions_ws_handler;
         use $crate::token;
 
         App::new()
@@ -193,11 +193,11 @@ macro_rules! create_app {
                          -> std::pin::Pin<
                             Box<
                                 dyn std::future::Future<
-                                    Output = Result<
-                                        actix_web::dev::ServiceResponse,
-                                        actix_web::Error,
+                                        Output = Result<
+                                            actix_web::dev::ServiceResponse,
+                                            actix_web::Error,
+                                        >,
                                     >,
-                                >,
                             >,
                         > {
                             let reference_token = req

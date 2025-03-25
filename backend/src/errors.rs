@@ -1,9 +1,9 @@
 use std::time::SystemTimeError;
 
+use actix_web::HttpResponse;
 use actix_web::error::BlockingError;
 use actix_web::error::PayloadError;
 use actix_web::error::ResponseError;
-use actix_web::HttpResponse;
 
 #[derive(Debug)]
 pub enum ServerError {

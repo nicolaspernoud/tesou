@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! crud_use {
     () => {
-        use actix_web::{delete, get, post, put, web, HttpResponse};
+        use actix_web::{HttpResponse, delete, get, post, put, web};
         use diesel::prelude::*;
         use diesel::r2d2::ConnectionManager;
         type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;

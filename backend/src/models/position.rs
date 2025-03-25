@@ -211,10 +211,10 @@ pub async fn read_filter(
     if let Ok(object) = object {
         Ok(HttpResponse::Ok().json(object))
     } else {
-        let res = HttpResponse::NotFound().body("No objects found");
-        Ok(res)
+            let res = HttpResponse::NotFound().body("No objects found");
+            Ok(res)
+        }
     }
-}
 
 crud_update!(Position, positions, User, users, user_id);
 crud_delete_all!(Position, positions);

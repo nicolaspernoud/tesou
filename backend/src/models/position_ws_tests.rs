@@ -42,7 +42,8 @@ pub async fn position_ws_test(
     let position_server_handle = position_server_handle.clone();
     let app = actix_test::start(move || create_app!(&pool, &app_config, &position_server_handle));
 
-    std::env::set_var("HEARTBEAT_INTERVAL", "3");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("HEARTBEAT_INTERVAL", "3") };
 
     // Create an user
     let user_id = create_user(&app).await;

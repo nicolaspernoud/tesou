@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use diesel::{connection::SimpleConnection, SqliteConnection};
+use diesel::{SqliteConnection, connection::SimpleConnection};
 
 #[derive(Debug)]
 pub struct ConnectionOptions {

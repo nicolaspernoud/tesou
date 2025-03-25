@@ -58,7 +58,10 @@ pub async fn user_test(
         app,
         Method::PUT,
         &format!("/api/users/{}", id),
-        &format!("{{\"id\":{}, \"name\":\"  Patched test name   \",\"surname\":\"    Patched test surname       \"}}",id),
+        &format!(
+            "{{\"id\":{}, \"name\":\"  Patched test name   \",\"surname\":\"    Patched test surname       \"}}",
+            id
+        ),
         StatusCode::OK,
         "{\"id\""
     );
@@ -113,7 +116,10 @@ pub async fn user_test(
         "/api/users",
         "",
         StatusCode::OK,
-        format!("[{{\"id\":{},\"name\":\"01_name\",\"surname\":\"01_description\"}},{{\"id\":{},\"name\":\"02_name\",\"surname\":\"02_description\"}}]", id1, id2)
+        format!(
+            "[{{\"id\":{},\"name\":\"01_name\",\"surname\":\"01_description\"}},{{\"id\":{},\"name\":\"02_name\",\"surname\":\"02_description\"}}]",
+            id1, id2
+        )
     );
 
     // Delete all the users

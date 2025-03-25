@@ -1,11 +1,11 @@
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart';
 
 String? getQueryParameter(String key) {
-  var uri = Uri.dataFromString(html.window.location.href);
+  var uri = Uri.dataFromString(window.location.href);
   return uri.queryParameters[key];
 }
 
 String getOrigin() {
-  return html.window.location.origin;
+  return window.location.origin;
 }

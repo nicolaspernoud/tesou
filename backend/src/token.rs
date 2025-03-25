@@ -1,8 +1,8 @@
-use actix_web::{get, web, HttpResponse, Responder, Result};
+use actix_web::{HttpResponse, Responder, Result, get, web};
 use base64ct::{Base64, Encoding};
 use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
     ChaCha20Poly1305,
+    aead::{Aead, AeadCore, KeyInit, OsRng},
 };
 use log::debug;
 use sha2::{Digest, Sha256};

@@ -1,7 +1,6 @@
 name: aosp_location
 description: "Location without Google Play Services"
 version: 0.0.1
-homepage:
 
 environment:
   sdk: '>=3.3.4 <4.0.0'

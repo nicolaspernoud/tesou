@@ -6,15 +6,15 @@ use std::{
 };
 
 use actix_web::Error;
+use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web::{
-    error::{self},
     Responder,
+    error::{self},
 };
-use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::AggregatedMessage;
 use futures_util::{
-    future::{select, Either},
     StreamExt as _,
+    future::{Either, select},
 };
 use tokio::{sync::mpsc, task::spawn_local, time::interval};
 
@@ -119,7 +119,8 @@ pub async fn positions_ws(
                 // if no heartbeat ping/pong received recently, close the connection
                 if Instant::now().duration_since(last_heartbeat) > *CLIENT_TIMEOUT {
                     log::info!(
-                        "client has not sent heartbeat in over {:?}; disconnecting", *CLIENT_TIMEOUT
+                        "client has not sent heartbeat in over {:?}; disconnecting",
+                        *CLIENT_TIMEOUT
                     );
                     break None;
                 }

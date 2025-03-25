@@ -1,8 +1,7 @@
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{Rng, distr::Alphanumeric, rng};
 
 pub fn random_string() -> std::string::String {
-    thread_rng()
+    rng()
         .sample_iter(&Alphanumeric)
         .take(48)
         .map(char::from)
