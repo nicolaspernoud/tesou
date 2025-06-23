@@ -21,18 +21,18 @@ class App {
     return prefs.token != "";
   }
 
-  log(String v) async {
+  Future<void> log(String v) async {
     if (!_initialized) {
       await init();
     }
     await prefs.addToLog(v);
   }
 
-  getLog() {
+  List<String> getLog() {
     return prefs.log;
   }
 
-  clearLog() {
+  void clearLog() {
     prefs.clearLog();
   }
 
@@ -71,23 +71,23 @@ class PositionQueue extends LocalFilePersister {
 
   List<Position> queue = [];
 
-  push(Position p) async {
+  Future<void> push(Position p) async {
     queue.add(p);
     await write();
   }
 
-  clear() async {
+  Future<void> clear() async {
     queue = [];
     await write();
   }
 
-  removeWhere(bool Function(Position) predicate) async {
+  Future<void> removeWhere(bool Function(Position) predicate) async {
     queue.removeWhere(predicate);
     await write();
   }
 
   @override
-  fromJson(String source) {
+  void fromJson(String source) {
     try {
       queue = List<Position>.from(json
           .decode(source)["positions"]

@@ -17,6 +17,7 @@ import 'package:tesou/models/preferences.dart';
 import 'package:tesou/url_parser/url_parser.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
 import 'package:tesou/globals.dart';
 import '../i18n.dart';
@@ -245,9 +246,10 @@ class HomeState extends State<Home>
                                 ),
                                 children: [
                                   TileLayer(
-                                    urlTemplate:
-                                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  ),
+                                      urlTemplate:
+                                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                      tileProvider:
+                                          CancellableNetworkTileProvider()),
                                   // If the last element comes from GPS, display a marker
                                   itms.elementAt(0).source == gpsSource
                                       ? MarkerLayer(

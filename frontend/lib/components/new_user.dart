@@ -30,7 +30,7 @@ class NewEditUserState extends State<NewEditUser> {
                   IconButton(
                       icon: const Icon(Icons.delete_forever),
                       onPressed: () async {
-                        await widget.crud.delete(widget.user.id);
+                        widget.crud.delete(widget.user.id);
                         if (!context.mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -99,9 +99,9 @@ class NewEditUserState extends State<NewEditUser> {
                           var msg = tr(context, "user_created");
                           try {
                             if (widget.user.id > 0) {
-                              await widget.crud.update(widget.user);
+                              widget.crud.update(widget.user);
                             } else {
-                              await widget.crud.create(widget.user);
+                              widget.crud.create(widget.user);
                             }
                             // Do nothing on TypeError as Create respond with a null id
                           } catch (e) {

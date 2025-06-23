@@ -28,7 +28,7 @@ class SportTaskHandler extends TaskHandler {
   }
 
   @override
-  Future<void> onDestroy(DateTime timestamp) async {
+  Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
     await _streamSubscription?.cancel();
     await FlutterForegroundTask.clearAllData();
   }
