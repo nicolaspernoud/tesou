@@ -99,15 +99,15 @@ class NewEditUserState extends State<NewEditUser> {
                           var msg = tr(context, "user_created");
                           try {
                             if (widget.user.id > 0) {
-                              widget.crud.update(widget.user);
+                              await widget.crud.update(widget.user);
                             } else {
-                              widget.crud.create(widget.user);
+                              await widget.crud.create(widget.user);
                             }
                             // Do nothing on TypeError as Create respond with a null id
                           } catch (e) {
                             msg = e.toString();
                           }
-                           if (!context.mounted) return;
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(msg)),
                           );

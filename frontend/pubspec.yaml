@@ -35,7 +35,7 @@ dependencies:
   flutter_foreground_task: 9.1.0
   flutter_localizations:
     sdk: flutter
-  flutter_map: 8.1.1
+  flutter_map: ^8.1.1
   # TEMPORARY
   flutter_map_geojson:
     git: https://github.com/NomiAdam/flutter_map_geojson
@@ -44,9 +44,9 @@ dependencies:
   http: 1.4.0
   latlong2: 0.9.1
   path_provider: 2.1.5
-  permission_handler: ^12.0.0+1
+  permission_handler: 12.0.1
   shared_preferences: 2.5.3
-  url_launcher: 6.3.1
+  url_launcher: 6.3.2
   web_socket_channel: 3.0.3
   geoxml: 2.6.2
   file_picker: 10.2.0
@@ -55,7 +55,7 @@ dependencies:
   flutter_beep:
     git:
       url: https://github.com/trietho/flutter_beep.git
-  flutter_map_cancellable_tile_provider: ^3.1.0
+  flutter_map_cancellable_tile_provider: 3.1.1
 
 dev_dependencies:
   flutter_launcher_icons: 0.14.4

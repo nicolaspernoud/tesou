@@ -22,7 +22,7 @@ jobs:
         run: |
           docker buildx build --push \
             --tag nicolaspernoud/tesou:"$([[ ${GITHUB_REF##*/} = main ]] && echo "latest" || echo "${GITHUB_REF##*/}")" \
-             $(cat versions.env | grep -v '^#' | xargs -I {} echo --build-arg {}) \
+            $(cat versions.env | grep -v '^#' | xargs -I {} echo --build-arg {}) \
             .
   app-build:
     name: Build frontend Android app
