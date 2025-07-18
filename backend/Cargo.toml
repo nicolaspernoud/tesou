@@ -6,14 +6,14 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4.11.0"
-diesel = { version = "2.2.11", features = ["r2d2", "sqlite"] }
+diesel = { version = "2.2.12", features = ["r2d2", "sqlite"] }
 diesel_migrations = "2.2.0"
 env_logger = "0.11.8"
 futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
 r2d2 = "0.8.10"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-libsqlite3-sys = { version = "0.33.0", features = ["bundled"] }
+libsqlite3-sys = { version = "0.35.0", features = ["bundled"] }
 actix = "0.13.5"
 actix-cors = "0.7.1"
 actix-files = "0.6.6"
@@ -21,8 +21,8 @@ actix-web-httpauth = "0.8.2"
 actix-ws = "0.3.0"
 rand = "0.9.1"
 log = "0.4.27"
-reqwest = { version = "0.12.20", features = ["json"] }
-tokio = { version = "1.45.1", features = ["macros", "sync"] }
+reqwest = { version = "0.12.22", features = ["json"] }
+tokio = { version = "1.46.1", features = ["macros", "sync"] }
 chacha20poly1305 = "0.10.1"
 sha2 = "0.10.9"
 base64ct = { version = "1.8.0", features = ["alloc"] }
