@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.location.LocationRequest
 import android.os.BatteryManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
@@ -26,6 +27,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import java.util.Calendar
+import java.util.function.Consumer
 
 const val CELL_INFO_ERROR = "CELL_INFO_ERROR"
 const val GPS_LOCATION_ERROR = "GPS_LOCATION_ERROR"
@@ -91,57 +93,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
 
   private fun getPositionFromGPS(result: MethodChannel.Result) {
     try {
-      val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-      if (location != null &&
-              location.getTime() > Calendar.getInstance().getTimeInMillis() - 10 * 1000
-      ) {
-        result.success(
-            "" + location.latitude + ":" + location.longitude + ":" + getBatteryLevel().toString()
-        )
-      } else {
-        var replied = false
-        val locationListener: LocationListener =
-            object : LocationListener {
-              override fun onLocationChanged(location: Location) {
-                locationManager.removeUpdates(this)
-                replied = true
-                result.success(
-                    "" +
-                        location.latitude +
-                        ":" +
-                        location.longitude +
-                        ":" +
-                        getBatteryLevel().toString()
-                )
-              }
-            }
-        val myLooper = Looper.myLooper()
-        locationManager.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER,
-            5000L,
-            0f,
-            locationListener,
-            myLooper
-        )
-        if (myLooper != null) {
-          val myHandler = Handler(myLooper)
-          myHandler.postDelayed(
-              Runnable() {
-                run() {
-                  if (!replied) {
-                    locationManager.removeUpdates(locationListener)
-                    result.error(GPS_LOCATION_ERROR, "GPS Timeout", null)
-                  }
-                }
-              },
-              GPS_TIMEOUT_MS
-          )
-        }
-      }
-      ///////////////////////////////////
-      // TO BE TRIED WITH ANDROID 12+ //
-      /////////////////////////////////
-      /*val locationRequest =
+      val locationRequest =
           LocationRequest.Builder(20000).setDurationMillis(GPS_TIMEOUT_MS).setMaxUpdates(1).build()
       locationManager!!.getCurrentLocation(
           LocationManager.GPS_PROVIDER,
@@ -160,8 +112,7 @@ class AospLocationPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
                         getBatteryLevel().toString()
                 )
           }
-      )*/
-      /////////////////////////////////
+      )
     } catch (ex: Exception) {
       result.error(GPS_LOCATION_ERROR, ex.message, null)
     }
