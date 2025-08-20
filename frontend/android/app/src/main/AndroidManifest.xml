@@ -10,7 +10,7 @@
         <meta-data android:name="flutterEmbedding" android:value="2" />
             <service 
                 android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-                android:foregroundServiceType="dataSync|location"
+                android:foregroundServiceType="location"
                 android:exported="false"
             />
         <meta-data
@@ -23,7 +23,6 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />

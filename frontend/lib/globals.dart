@@ -21,6 +21,14 @@ class App {
     return prefs.token != "";
   }
 
+  bool get sportMode {
+    return prefs.sportsMode;
+  }
+
+  set sportMode(bool v) {
+    prefs.sportMode = v;
+  }
+
   Future<void> log(String v) async {
     if (!_initialized) {
       await init();

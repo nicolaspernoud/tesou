@@ -10,10 +10,12 @@ class SharedPosition {
 
   static SharedPosition? fromUrl() {
     String? codedToken = getQueryParameter("token");
-    String? token =
-        codedToken != null ? Uri.decodeComponent(codedToken) : null;
+    if (codedToken == null || codedToken.isEmpty) {
+      return null;
+    }
+    String? token = Uri.decodeComponent(codedToken);
     int? id = int.tryParse(getQueryParameter("user") ?? "");
-    if (token == null || id == null) {
+    if (id == null) {
       return null;
     }
     return SharedPosition._(shareToken: token, shareUserId: id);

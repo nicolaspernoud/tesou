@@ -37,6 +37,15 @@ class Preferences extends LocalFilePersister {
 
   int get userId => _userId;
 
+  bool _sportMode = false;
+
+  set sportMode(bool v) {
+    _sportMode = v;
+    write();
+  }
+
+  bool get sportsMode => _sportMode;
+
   bool _logEnabled = false;
 
   set logEnabled(bool v) {
@@ -108,7 +117,9 @@ abstract class LocalFilePersister {
     if (kIsWeb) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? contents = prefs.getString(name);
-      if (contents != null) fromJson(contents);
+      if (contents != null) {
+        fromJson(contents);
+      }
     } else {
       try {
         final file = await localFile;

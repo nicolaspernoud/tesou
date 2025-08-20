@@ -54,7 +54,6 @@ class HomeState extends State<Home>
   late Future<List<User>> users;
   int displayedUser = 1;
   final MapController mapController = MapController();
-  bool _sportMode = false;
   WebSocketChannel? wsChannel;
   final stopwatch = Stopwatch();
   List<Polyline>? trace;
@@ -384,7 +383,7 @@ class HomeState extends State<Home>
                     children: [
                       if (!kIsWeb) ...[
                         IconButton(
-                            icon: _sportMode
+                            icon: App().sportMode
                                 ? const CircleAvatar(
                                     radius: 40,
                                     backgroundColor: Colors.pink,
@@ -395,11 +394,11 @@ class HomeState extends State<Home>
                             onPressed: () async {
                               setState(() {
                                 kms = 0;
-                                _sportMode = !_sportMode;
+                                App().sportMode = !App().sportMode;
                               });
-                              widget.foregroundTaskCommand(_sportMode);
+                              widget.foregroundTaskCommand(App().sportMode);
                             }),
-                        if (!_sportMode)
+                        if (!App().sportMode)
                           IconButton(
                               icon: const Icon(Icons.my_location),
                               onPressed: () async {
