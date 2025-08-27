@@ -24,10 +24,9 @@ Future<void> main() async {
           title: 'Tesou!',
           usersCrud: userCrud,
           foregroundTaskCommand: _startForegroundTask,
+          audioHandler: null,
         ),
-        localizationsDelegates: const [
-          MyLocalizationsDelegate(),
-        ],
+        localizationsDelegates: const [MyLocalizationsDelegate()],
       ),
     );
 

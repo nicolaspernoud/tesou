@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:tesou/audio_handler.dart';
 import 'package:tesou/components/home.dart';
 import 'package:tesou/globals.dart';
 import 'package:tesou/i18n.dart';
@@ -15,6 +17,8 @@ import 'package:tesou/normal_task_handler.dart';
 import 'package:tesou/sport_task_handler.dart';
 import 'package:tesou/url_parser/url_parser.dart';
 
+late TesouAudioHandler _audioHandler;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await App().init();
@@ -22,14 +26,19 @@ Future<void> main() async {
     while (!(await Permission.location.status.isGranted) &&
         !(await Permission.locationAlways.status.isGranted) &&
         !(await Permission.phone.status.isGranted)) {
-      await [
-        Permission.location,
-        Permission.phone,
-      ].request();
+      await [Permission.location, Permission.phone].request();
       await Permission.locationAlways.request();
     }
   }
   if (!kIsWeb) FlutterForegroundTask.initCommunicationPort();
+  _audioHandler = await AudioService.init(
+    builder: () => TesouAudioHandler(),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'fr.ninico.tesou.channel.audio',
+      androidNotificationChannelName: 'Audio playback',
+      //androidNotificationOngoing: true,
+    ),
+  );
   runApp(const MyApp());
 }
 
@@ -81,39 +90,39 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'Tesou!',
       theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.green,
-          ),
-          appBarTheme: AppBarTheme(
-            backgroundColor: Colors.green,
-            elevation: 4,
-            shadowColor: Theme.of(context).shadowColor,
-          )),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.green,
+          elevation: 4,
+          shadowColor: Theme.of(context).shadowColor,
+        ),
+      ),
       home: Home(
-          key: _homeState,
-          crud: positionCrud,
-          title: 'Tesou!',
-          usersCrud: userCrud,
-          foregroundTaskCommand: _updateService, //_startForegroundTask,
-          sharedPosition: sharedPosition),
+        key: _homeState,
+        crud: positionCrud,
+        title: 'Tesou!',
+        usersCrud: userCrud,
+        foregroundTaskCommand: _updateService, //_startForegroundTask,
+        audioHandler: _audioHandler,
+        sharedPosition: sharedPosition,
+      ),
       localizationsDelegates: const [
         MyLocalizationsDelegate(),
         ...GlobalMaterialLocalizations.delegates,
         GlobalWidgetsLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en', ''),
-        Locale('fr', ''),
-      ],
+      supportedLocales: const [Locale('en', ''), Locale('fr', '')],
     );
   }
 
   Future<void> _onReceiveTaskData(Object position) async {
     if (position is Map<String, dynamic>) {
-      await App()
-          .log('Received position from stream into main isolate : $position');
-      await _homeState.currentState
-          ?.addLocalPosition(Position.fromJson(position));
+      await App().log(
+        'Received position from stream into main isolate : $position',
+      );
+      await _homeState.currentState?.addLocalPosition(
+        Position.fromJson(position),
+      );
     }
   }
 

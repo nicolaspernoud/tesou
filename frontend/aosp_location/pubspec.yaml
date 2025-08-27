@@ -3,7 +3,7 @@ description: "Location without Google Play Services"
 version: 0.0.1
 
 environment:
-  sdk: ^3.8.1
+  sdk: ^3.9.0
   flutter: '>=3.3.0'
 
 dependencies:
@@ -36,7 +36,6 @@ flutter:
       android:
         package: fr.ninico.aosp_location
         pluginClass: AospLocationPlugin
-
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

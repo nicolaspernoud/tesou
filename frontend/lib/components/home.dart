@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_beep/flutter_beep.dart';
 import 'package:flutter_map_geojson/flutter_map_geojson.dart';
 import 'package:geoxml/geoxml.dart';
+import 'package:tesou/audio_handler.dart';
 import 'package:tesou/components/speed_gauge.dart';
 import 'package:tesou/components/users_dropdown.dart';
 import 'package:tesou/models/new_position.dart';
@@ -34,15 +34,19 @@ class Home extends StatefulWidget {
 
   final Function foregroundTaskCommand;
 
+  final TesouAudioHandler? audioHandler;
+
   final SharedPosition? sharedPosition;
 
-  const Home(
-      {super.key,
-      required this.crud,
-      required this.usersCrud,
-      required this.title,
-      required this.foregroundTaskCommand,
-      this.sharedPosition});
+  const Home({
+    super.key,
+    required this.crud,
+    required this.usersCrud,
+    required this.title,
+    required this.foregroundTaskCommand,
+    this.audioHandler,
+    this.sharedPosition,
+  });
 
   @override
   HomeState createState() => HomeState();
@@ -60,7 +64,9 @@ class HomeState extends State<Home>
   bool closeToTrace = false;
   int kms = 0;
   GeoJsonParser geoJsonParser = GeoJsonParser(
-      defaultPolylineColor: Colors.green, defaultPolylineStroke: 6.0);
+    defaultPolylineColor: Colors.green,
+    defaultPolylineStroke: 6.0,
+  );
 
   @override
   void initState() {
@@ -87,7 +93,7 @@ class HomeState extends State<Home>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && App().hasToken) {
       getData();
     }
     if (state == AppLifecycleState.paused) {
@@ -97,22 +103,31 @@ class HomeState extends State<Home>
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     final latTween = Tween<double>(
-        begin: mapController.camera.center.latitude,
-        end: destLocation.latitude);
+      begin: mapController.camera.center.latitude,
+      end: destLocation.latitude,
+    );
     final lngTween = Tween<double>(
-        begin: mapController.camera.center.longitude,
-        end: destLocation.longitude);
-    final zoomTween =
-        Tween<double>(begin: mapController.camera.zoom, end: destZoom);
+      begin: mapController.camera.center.longitude,
+      end: destLocation.longitude,
+    );
+    final zoomTween = Tween<double>(
+      begin: mapController.camera.zoom,
+      end: destZoom,
+    );
     var controller = AnimationController(
-        duration: const Duration(milliseconds: 500), vsync: this);
-    Animation<double> animation =
-        CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    Animation<double> animation = CurvedAnimation(
+      parent: controller,
+      curve: Curves.fastOutSlowIn,
+    );
 
     controller.addListener(() {
       mapController.move(
-          LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
-          zoomTween.evaluate(animation));
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
     });
 
     animation.addStatusListener((status) {
@@ -131,10 +146,7 @@ class HomeState extends State<Home>
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: Text(tr(context, "settings")),
-        content: const SizedBox(
-          height: 150,
-          child: SettingsField(),
-        ),
+        content: const SizedBox(height: 150, child: SettingsField()),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, 'OK'),
@@ -169,39 +181,46 @@ class HomeState extends State<Home>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/icon/icon_foreground_big.png',
-                fit: BoxFit.contain,
-                height: 30,
+      appBar: AppBar(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/icon/icon_foreground_big.png',
+              fit: BoxFit.contain,
+              height: 30,
+            ),
+            Text(
+              widget.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              Text(
-                widget.title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white),
-              )
-            ],
-          ),
-          actions: [
-            IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () async {
-                  await Navigator.push(context,
-                      MaterialPageRoute<void>(builder: (BuildContext context) {
-                    return Settings(crud: APICrud<User>());
-                  }));
-                  setState(() {
-                    hasTokenOrOpenSettings();
-                  });
-                })
+            ),
           ],
         ),
-        body: (App().hasToken)
-            ? Center(
-                child: Padding(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) {
+                    return Settings(crud: APICrud<User>());
+                  },
+                ),
+              );
+              setState(() {
+                hasTokenOrOpenSettings();
+              });
+            },
+          ),
+        ],
+      ),
+      body: (App().hasToken)
+          ? Center(
+              child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: FutureBuilder<List<Position>>(
                   future: positions,
@@ -211,8 +230,11 @@ class HomeState extends State<Home>
                       var itms = snapshot.data!;
                       itms.sort((a, b) => b.time.compareTo(a.time));
                       var normalPoints = itms
-                          .where((e) => e.time.isAfter(DateTime.now()
-                              .subtract(const Duration(hours: 6))))
+                          .where(
+                            (e) => e.time.isAfter(
+                              DateTime.now().subtract(const Duration(hours: 6)),
+                            ),
+                          )
                           .where((e) => e.source == gpsSource)
                           .map((e) => LatLng(e.latitude, e.longitude))
                           .toList();
@@ -230,13 +252,15 @@ class HomeState extends State<Home>
                                 mapController: mapController,
                                 options: MapOptions(
                                   initialCenter: LatLng(
-                                      itms.elementAt(0).latitude,
-                                      itms.elementAt(0).longitude),
+                                    itms.elementAt(0).latitude,
+                                    itms.elementAt(0).longitude,
+                                  ),
                                   initialZoom: zoom(itms.elementAt(0)),
                                   minZoom: 0,
                                   maxZoom: 18,
                                   interactionOptions: const InteractionOptions(
-                                    flags: InteractiveFlag.all &
+                                    flags:
+                                        InteractiveFlag.all &
                                         ~InteractiveFlag.rotate,
                                   ),
                                   onPositionChanged: (position, hasGesture) {
@@ -254,8 +278,11 @@ class HomeState extends State<Home>
                                     attributions: [
                                       TextSourceAttribution(
                                         'OpenStreetMap contributors',
-                                        onTap: () => launchUrl(Uri.parse(
-                                            'https://openstreetmap.org/copyright')), // (external)
+                                        onTap: () => launchUrl(
+                                          Uri.parse(
+                                            'https://openstreetmap.org/copyright',
+                                          ),
+                                        ), // (external)
                                       ),
                                     ],
                                   ),
@@ -267,44 +294,50 @@ class HomeState extends State<Home>
                                               width: 80.0,
                                               height: 80.0,
                                               point: LatLng(
-                                                  itms.elementAt(0).latitude,
-                                                  itms.elementAt(0).longitude),
+                                                itms.elementAt(0).latitude,
+                                                itms.elementAt(0).longitude,
+                                              ),
                                               child: Icon(
                                                 Icons.location_on,
                                                 color:
                                                     itms.elementAt(0).sportMode
-                                                        ? Colors.pink
-                                                        : Colors.blue,
+                                                    ? Colors.pink
+                                                    : Colors.blue,
                                                 size: 40,
                                               ),
                                             ),
                                           ],
                                         )
                                       // else display a circle
-                                      : CircleLayer(circles: [
-                                          CircleMarker(
+                                      : CircleLayer(
+                                          circles: [
+                                            CircleMarker(
                                               point: LatLng(
-                                                  itms.elementAt(0).latitude,
-                                                  itms.elementAt(0).longitude),
+                                                itms.elementAt(0).latitude,
+                                                itms.elementAt(0).longitude,
+                                              ),
                                               color: Colors.blue.withAlpha(80),
                                               useRadiusInMeter: true,
-                                              radius: 1000 // 1 km
-                                              ),
-                                        ]),
+                                              radius: 1000, // 1 km
+                                            ),
+                                          ],
+                                        ),
                                   // Draw a line with the last positions coming from GPS
                                   PolylineLayer(
                                     polylines: [
                                       if (trace != null) ...trace!,
                                       if (normalPoints.isNotEmpty)
                                         Polyline(
-                                            points: normalPoints,
-                                            strokeWidth: 4.0,
-                                            color: Colors.blueAccent),
+                                          points: normalPoints,
+                                          strokeWidth: 4.0,
+                                          color: Colors.blueAccent,
+                                        ),
                                       if (runningPoints.isNotEmpty)
                                         Polyline(
-                                            points: runningPoints,
-                                            strokeWidth: 4.0,
-                                            color: Colors.pink),
+                                          points: runningPoints,
+                                          strokeWidth: 4.0,
+                                          color: Colors.pink,
+                                        ),
                                     ],
                                   ),
                                   Column(
@@ -316,18 +349,22 @@ class HomeState extends State<Home>
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.symmetric(
-                                                vertical: 5, horizontal: 10),
+                                              vertical: 5,
+                                              horizontal: 10,
+                                            ),
                                             decoration: BoxDecoration(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .surface,
-                                                borderRadius:
-                                                    const BorderRadius.vertical(
-                                                  top: Radius.circular(10),
-                                                )),
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.surface,
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(10),
+                                                  ),
+                                            ),
                                             child: lastRunDistance(itms) > 0
                                                 ? Text(
-                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h")
+                                                    "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}% - ${lastRunDistance(itms).toStringAsFixed(1)} km - ${lastRunSpeed(itms).toStringAsFixed(1)} km/h",
+                                                  )
                                                 : Text(
                                                     "${formatTime(itms.elementAt(0).time)} - ${itms.elementAt(0).batteryLevel.toString()}%",
                                                     style: const TextStyle(
@@ -335,24 +372,25 @@ class HomeState extends State<Home>
                                                       color: Colors.black,
                                                     ),
                                                   ),
-                                          )
+                                          ),
                                         ],
                                       ),
                                     ],
                                   ),
                                   if (itms.length >= 4)
                                     AnimatedOpacity(
-                                        opacity: itms.elementAt(0).sportMode
-                                            ? 1.0
-                                            : 0.0,
-                                        duration:
-                                            const Duration(milliseconds: 300),
-                                        child: SpeedGauge(
-                                          speed:
-                                              lastRunSpeed(itms.sublist(0, 4)),
-                                          maxSpeed: 20,
-                                          size: 50,
-                                        ))
+                                      opacity: itms.elementAt(0).sportMode
+                                          ? 1.0
+                                          : 0.0,
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      child: SpeedGauge(
+                                        speed: lastRunSpeed(itms.sublist(0, 4)),
+                                        maxSpeed: 20,
+                                        size: 50,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -370,54 +408,61 @@ class HomeState extends State<Home>
                     );
                   },
                 ),
-              ))
-            : null,
-        bottomNavigationBar: widget.sharedPosition != null
-            ? null
-            : StickyBottomAppBar(
-                child: BottomAppBar(
-                    child: Padding(
+              ),
+            )
+          : null,
+      bottomNavigationBar: widget.sharedPosition != null
+          ? null
+          : StickyBottomAppBar(
+              child: BottomAppBar(
+                child: Padding(
                   padding: const EdgeInsets.all(8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (!kIsWeb) ...[
                         IconButton(
-                            icon: App().sportMode
-                                ? const CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: Colors.pink,
-                                    child: Icon(Icons.directions_run,
-                                        color: Colors.white),
-                                  )
-                                : const Icon(Icons.directions_walk),
-                            onPressed: () async {
-                              setState(() {
-                                kms = 0;
-                                App().sportMode = !App().sportMode;
-                              });
-                              widget.foregroundTaskCommand(App().sportMode);
-                            }),
+                          icon: App().sportMode
+                              ? const CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.pink,
+                                  child: Icon(
+                                    Icons.directions_run,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.directions_walk),
+                          onPressed: () async {
+                            setState(() {
+                              kms = 0;
+                              App().sportMode = !App().sportMode;
+                            });
+                            widget.foregroundTaskCommand(App().sportMode);
+                          },
+                        ),
                         if (!App().sportMode)
                           IconButton(
-                              icon: const Icon(Icons.my_location),
-                              onPressed: () async {
-                                try {
-                                  await getPositionAndPushToServer(false);
-                                  await getDataAndMoveToLastPosition();
-                                } catch (_) {}
-                              }),
+                            icon: const Icon(Icons.my_location),
+                            onPressed: () async {
+                              try {
+                                await getPositionAndPushToServer(false);
+                                await getDataAndMoveToLastPosition();
+                              } catch (_) {}
+                            },
+                          ),
                       ],
                       IconButton(
-                          icon: const Icon(Icons.refresh),
-                          onPressed: () async {
-                            await getDataAndMoveToLastPosition();
-                          }),
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () async {
+                          await getDataAndMoveToLastPosition();
+                        },
+                      ),
                       IconButton(
-                          icon: const Icon(Icons.timeline),
-                          onPressed: () async {
-                            await openFilePickerAndReadTrace();
-                          }),
+                        icon: const Icon(Icons.timeline),
+                        onPressed: () async {
+                          await openFilePickerAndReadTrace();
+                        },
+                      ),
                       if (App().hasToken)
                         UsersDropdown(
                           users: users,
@@ -429,8 +474,10 @@ class HomeState extends State<Home>
                         ),
                     ],
                   ),
-                )),
-              ));
+                ),
+              ),
+            ),
+    );
   }
 
   Future<void> getDataAndMoveToLastPosition() async {
@@ -441,7 +488,9 @@ class HomeState extends State<Home>
       var itms = await positions;
       if (itms.isNotEmpty) {
         _animatedMapMove(
-            LatLng(itms.last.latitude, itms.last.longitude), zoom(itms.last));
+          LatLng(itms.last.latitude, itms.last.longitude),
+          zoom(itms.last),
+        );
       }
     } catch (_) {}
   }
@@ -480,8 +529,9 @@ class HomeState extends State<Home>
   void centerView(List<Position> itms) {
     if (stopwatch.elapsed.inSeconds > 20) {
       _animatedMapMove(
-          LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
-          zoom(itms.elementAt(0)));
+        LatLng(itms.elementAt(0).latitude, itms.elementAt(0).longitude),
+        zoom(itms.elementAt(0)),
+      );
     }
   }
 
@@ -495,30 +545,34 @@ class HomeState extends State<Home>
       centerView(itms);
       // If we enter the trace proximity, make a success beep, if we leave, make a failure beep
       if (trace != null) {
-        bool gettingCloseToTrace = trace!.cast<LatLng?>().firstWhere(
-                  (element) =>
-                      position.Haversine.haversine(element!.latitude,
-                          element.longitude, pos.latitude, pos.longitude) <
-                      0.05,
-                  orElse: () => null,
-                ) !=
+        bool gettingCloseToTrace =
+            trace?.first.points.cast<LatLng?>().firstWhere(
+              (element) =>
+                  position.Haversine.haversine(
+                    element!.latitude,
+                    element.longitude,
+                    pos.latitude,
+                    pos.longitude,
+                  ) <
+                  0.05,
+              orElse: () => null,
+            ) !=
             null;
         if (!closeToTrace && gettingCloseToTrace) {
           closeToTrace = true;
-          FlutterBeep.beep();
+          widget.audioHandler?.playEnteredTrack();
         } else if (closeToTrace && !gettingCloseToTrace) {
           closeToTrace = false;
-          FlutterBeep.beep(false);
+          widget.audioHandler?.playExitedTrack();
         }
       }
       // Beep every kilometers
       int newKms = lastRunDistance(itms).floor();
       if (newKms > kms) {
         if (newKms % 5 == 0) {
-          await FlutterBeep.playSysSound(
-              AndroidSoundIDs.TONE_CDMA_ALERT_INCALL_LITE);
+          widget.audioHandler?.play5km();
         } else {
-          FlutterBeep.playSysSound(AndroidSoundIDs.TONE_CDMA_PRESSHOLDKEY_LITE);
+          widget.audioHandler?.play1km();
         }
       }
       kms = newKms;
@@ -534,8 +588,10 @@ class HomeState extends State<Home>
 
   Future<void> openFilePickerAndReadTrace() async {
     try {
-      FilePickerResult? result = await FilePicker.platform
-          .pickFiles(type: FileType.any, withData: true);
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        withData: true,
+      );
 
       if (result != null && result.files.single.extension != null) {
         String fileContent = String.fromCharCodes(result.files.single.bytes!);
@@ -544,12 +600,15 @@ class HomeState extends State<Home>
             var traceXml = await GeoXml.fromGpxString(fileContent);
             setState(() {
               trace = traceXml.trks[0].trksegs
-                  .map((segment) => Polyline(
+                  .map(
+                    (segment) => Polyline(
                       points: segment.trkpts
                           .map((e) => LatLng(e.lat!, e.lon!))
                           .toList(),
                       strokeWidth: 6.0,
-                      color: Colors.green))
+                      color: Colors.green,
+                    ),
+                  )
                   .toList();
             });
           case 'json':
