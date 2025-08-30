@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:latlong2/latlong.dart';
+
 import 'crud.dart';
 
 class Position extends Serialisable {
@@ -10,15 +12,16 @@ class Position extends Serialisable {
   int batteryLevel;
   bool sportMode;
 
-  Position(
-      {required super.id,
-      required this.userId,
-      required this.latitude,
-      required this.longitude,
-      required this.source,
-      required this.batteryLevel,
-      required this.sportMode,
-      required this.time});
+  Position({
+    required super.id,
+    required this.userId,
+    required this.latitude,
+    required this.longitude,
+    required this.source,
+    required this.batteryLevel,
+    required this.sportMode,
+    required this.time,
+  });
 
   @override
   Map<String, dynamic> toJson() {
@@ -30,22 +33,23 @@ class Position extends Serialisable {
       'source': source,
       'battery_level': batteryLevel,
       'sport_mode': sportMode,
-      'time': time.millisecondsSinceEpoch
+      'time': time.millisecondsSinceEpoch,
     };
   }
 
   factory Position.fromJson(Map<String, dynamic> json) {
     return Position(
-        id: json['id'] ?? 0,
-        userId: json['user_id'],
-        latitude: json['latitude'],
-        longitude: json['longitude'],
-        source: json['source'],
-        batteryLevel: json['battery_level'],
-        sportMode: json['sport_mode'] ?? false,
-        time: json['time'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(json['time'])
-            : DateTime.now());
+      id: json['id'] ?? 0,
+      userId: json['user_id'],
+      latitude: json['latitude'],
+      longitude: json['longitude'],
+      source: json['source'],
+      batteryLevel: json['battery_level'],
+      sportMode: json['sport_mode'] ?? false,
+      time: json['time'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['time'])
+          : DateTime.now(),
+    );
   }
 
   @override
@@ -96,7 +100,11 @@ double lastRunDistance(List<Position> positions) {
   for (var p in pos) {
     previous ??= p;
     acc += Haversine.haversine(
-        previous.latitude, previous.longitude, p.latitude, p.longitude);
+      previous.latitude,
+      previous.longitude,
+      p.latitude,
+      p.longitude,
+    );
     previous = p;
   }
   return acc;
@@ -125,4 +133,45 @@ class Haversine {
   static double _toRadians(double degree) {
     return degree * pi / 180;
   }
+}
+
+// Helper function to check proximity to trace (<= 50 meters)
+bool isPointCloseToTrace(LatLng point, List<LatLng> tracePoints) {
+  const double thresholdMeters = 50.0;
+  if (tracePoints.length < 2) return false;
+
+  for (int i = 0; i < tracePoints.length - 1; i++) {
+    LatLng a = tracePoints[i];
+    LatLng b = tracePoints[i + 1];
+
+    // Distance from point to segment ab
+    double distance = _distanceToSegment(point, a, b);
+    if (distance <= thresholdMeters) return true;
+  }
+  return false;
+}
+
+// Calculate the shortest distance from point p to segment ab
+double _distanceToSegment(LatLng p, LatLng a, LatLng b) {
+  // If a == b, just return distance to a
+  if (a.latitude == b.latitude && a.longitude == b.longitude) {
+    return Haversine.haversine(a.latitude, a.longitude, p.latitude, p.longitude) * 1000;
+  }
+
+  // Project point p onto segment ab in latitude/longitude space
+  // Treat latitude as y and longitude as x for a rough planar approximation
+  // Find t such that the projection falls on the segment ab:
+  // t = ((p - a) . (b - a)) / |b - a|^2, clamped to [0, 1]
+  double dx = b.longitude - a.longitude;
+  double dy = b.latitude - a.latitude;
+  double d2 = dx * dx + dy * dy;
+  double t = ((p.longitude - a.longitude) * dx + (p.latitude - a.latitude) * dy) / d2;
+  t = t.clamp(0.0, 1.0);
+
+  // Compute projected point coordinates
+  double projLongitude = a.longitude + t * dx;
+  double projLatitude = a.latitude + t * dy;
+
+  // Distance from p to projection using Haversine (in meters)
+  return Haversine.haversine(projLatitude, projLongitude, p.latitude, p.longitude) * 1000;
 }

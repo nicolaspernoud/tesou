@@ -22,7 +22,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:tesou/globals.dart';
 import '../i18n.dart';
 import 'settings.dart';
-import 'package:tesou/models/position.dart' as position;
 
 const gpsSource = "GPS";
 
@@ -61,7 +60,8 @@ class HomeState extends State<Home>
   WebSocketChannel? wsChannel;
   final stopwatch = Stopwatch();
   List<Polyline>? trace;
-  bool closeToTrace = false;
+  int missedPoints = 0;
+  bool onceOnTrace = false;
   int kms = 0;
   GeoJsonParser geoJsonParser = GeoJsonParser(
     defaultPolylineColor: Colors.green,
@@ -545,26 +545,25 @@ class HomeState extends State<Home>
       centerView(itms);
       // If we enter the trace proximity, make a success beep, if we leave, make a failure beep
       if (trace != null) {
-        bool gettingCloseToTrace =
-            trace?.first.points.cast<LatLng?>().firstWhere(
-              (element) =>
-                  position.Haversine.haversine(
-                    element!.latitude,
-                    element.longitude,
-                    pos.latitude,
-                    pos.longitude,
-                  ) <
-                  0.05,
-              orElse: () => null,
-            ) !=
-            null;
-        if (!closeToTrace && gettingCloseToTrace) {
-          closeToTrace = true;
-          widget.audioHandler?.playEnteredTrack();
-        } else if (closeToTrace && !gettingCloseToTrace) {
-          closeToTrace = false;
-          widget.audioHandler?.playExitedTrack();
+        bool closeToTrace = isPointCloseToTrace(
+          LatLng(pos.latitude, pos.longitude),
+          trace?.expand((polyline) => polyline.points).toList() ?? [],
+        );
+        if (closeToTrace) {
+          if (missedPoints > 0) {
+            widget.audioHandler?.playEnteredTrack();
+            onceOnTrace = true;
+          }
+          missedPoints = 0;
+        } else {
+          missedPoints++;
+          if (onceOnTrace && missedPoints % 3 == 0) {
+            widget.audioHandler?.playExitedTrack();
+          }
         }
+      } else {
+        missedPoints = 0;
+        onceOnTrace = false;
       }
       // Beep every kilometers
       int newKms = lastRunDistance(itms).floor();
