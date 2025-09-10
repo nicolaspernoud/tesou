@@ -30,8 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  aosp_location:
-    path: aosp_location
   audio_service: ^0.18.18
   flutter_foreground_task: 9.2.0
   flutter_localizations:
@@ -50,12 +48,14 @@ dependencies:
   url_launcher: 6.3.2
   web_socket_channel: 3.0.3
   geoxml: 2.6.2
-  file_picker: 10.3.8
+  file_picker: 10.3.10
   web: 1.1.1
   just_audio: ^0.10.5
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  geolocator: ^14.0.2
+  battery_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,12 +1,11 @@
 import 'dart:async';
-
-import 'package:aosp_location/aosp_location.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:tesou/globals.dart';
 import 'package:tesou/models/new_position.dart';
 
 class LocationTaskHandler extends TaskHandler {
-  StreamSubscription<String>? _streamSubscription;
+  StreamSubscription<Position>? _streamSubscription;
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
@@ -33,18 +32,18 @@ class LocationTaskHandler extends TaskHandler {
   }
 
   void _startStream() {
-    final stream = AospLocation.instance.getPositionStream;
-    _streamSubscription = stream.listen((event) async {
-      await App().log("Got position event from stream");
-      var pos = await createPositionFromStream(event);
-      await App().log("Got position from stream : $pos");
-      // Send data to the main isolate.
-      FlutterForegroundTask.sendDataToMain(pos.toJson());
-      await App().log("Sent position to main isolate");
-      if (!pos.sportMode) {
-        _applyMode(false);
-      }
-    });
+    _streamSubscription =
+        Geolocator.getPositionStream().where((e) => e.accuracy < 10).listen((Position? position) async {
+          await App().log("Got position event from stream");
+          var pos = await createPositionFromStream(position!);
+          await App().log("Got position from stream : $pos");
+          // Send data to the main isolate.
+          FlutterForegroundTask.sendDataToMain(pos!.toJson());
+          await App().log("Sent position to main isolate");
+          if (!pos.sportMode) {
+            _applyMode(false);
+          }
+        });
   }
 
   void _stopStream() {
