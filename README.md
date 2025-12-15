@@ -11,6 +11,14 @@ Backend is made with Actix-web and Rust.
 Frontend is made with Flutter.
 A native Kotlin plugin is built in for accessing Android GPS Location and Cell ID. iOS is not (yet) supported.
 
+## Upgrade guide
+
+- Regenerate a clean flutter project (see below)
+- Upgrade versions in versions.env
+- Upgrade flutter dependencies in pubspec.yml
+- Upgrade Dockerfile and GitHub actions build.yml
+- Upgrade Rust Cargo.toml dependencies
+
 ### Recreate frontend
 
 ```

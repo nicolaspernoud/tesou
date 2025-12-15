@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.0
+  sdk: ^3.10.4
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -36,23 +36,23 @@ dependencies:
   flutter_foreground_task: 9.1.0
   flutter_localizations:
     sdk: flutter
-  flutter_map: 8.2.1
+  flutter_map: 8.2.2
   # TEMPORARY
   flutter_map_geojson:
     git: https://github.com/NomiAdam/flutter_map_geojson
   intl: 0.20.2
   html: 0.15.6
-  http: 1.5.0
+  http: 1.6.0
   latlong2: 0.9.1
   path_provider: 2.1.5
   permission_handler: 12.0.1
-  shared_preferences: 2.5.3
+  shared_preferences: 2.5.4
   url_launcher: 6.3.2
   web_socket_channel: 3.0.3
   geoxml: 2.6.2
-  file_picker: 10.3.2
+  file_picker: 10.3.7
   web: 1.1.1
-  just_audio: ^0.10.4
+  just_audio: ^0.10.5
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
