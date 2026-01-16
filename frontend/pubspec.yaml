@@ -33,7 +33,7 @@ dependencies:
   aosp_location:
     path: aosp_location
   audio_service: ^0.18.18
-  flutter_foreground_task: 9.1.0
+  flutter_foreground_task: 9.2.0
   flutter_localizations:
     sdk: flutter
   flutter_map: 8.2.2
@@ -50,7 +50,7 @@ dependencies:
   url_launcher: 6.3.2
   web_socket_channel: 3.0.3
   geoxml: 2.6.2
-  file_picker: 10.3.7
+  file_picker: 10.3.8
   web: 1.1.1
   just_audio: ^0.10.5
   # The following adds the Cupertino Icons font to your application.
