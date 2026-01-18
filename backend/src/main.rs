@@ -65,7 +65,7 @@ async fn main() -> std::io::Result<()> {
             info!("Authorization token: {}", token);
             token
         }),
-        env::var("API_KEY").expect("Open Cell ID API Key not found"),
+        env::var("API_KEY").ok(),
     );
     // Data should be constructed outside the HttpServer::new closure if shared, potentially mutable state is desired...
     let app_config = Data::new(app_config);

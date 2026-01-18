@@ -282,9 +282,9 @@ pub async fn create_from_cid(
     if cell_id.lat != -1 {
         o.latitude = (cell_id.lat / 1296000) as f64;
         o.longitude = (cell_id.long / 2592000) as f64;
-    } else {
+    } else if let Some(api_key) = &cfg.open_cell_id_api_key {
         // Get the cell location from open Cell Id database
-        let ocid_resp = get_resp(&cell_id, &cfg.open_cell_id_api_key).await?;
+        let ocid_resp = get_resp(&cell_id, api_key).await?;
         // Create position from those informations
         o.latitude = ocid_resp.lat;
         o.longitude = ocid_resp.lon;

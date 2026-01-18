@@ -17,12 +17,12 @@ use tokio::sync::Mutex;
 
 pub struct AppConfig {
     pub bearer_token: String,
-    pub open_cell_id_api_key: String,
+    pub open_cell_id_api_key: Option<String>,
     pub user_last_update: Mutex<HashMap<i32, i64>>,
 }
 
 impl AppConfig {
-    pub fn new(token: String, api_key: String) -> Self {
+    pub fn new(token: String, api_key: Option<String>) -> Self {
         AppConfig {
             bearer_token: token,
             open_cell_id_api_key: api_key,

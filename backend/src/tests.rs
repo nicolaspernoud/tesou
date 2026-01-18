@@ -30,7 +30,7 @@ async fn test_models() {
         .expect("couldn't run migrations");
 
     // Set up authorization token
-    let app_config = AppConfig::new("0101".to_string(), "0202".to_string());
+    let app_config = AppConfig::new("0101".to_string(), None);
     let app_data = Data::new(app_config);
     let (positions_server, server_tx) = PositionsServer::new();
     let positions_server = spawn(positions_server.run());
