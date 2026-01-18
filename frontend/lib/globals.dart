@@ -66,7 +66,8 @@ class App {
     try {
       await APICrud<Position>().createMany(_positions.queue);
       _positions.clear();
-      return true;
+      // We return the sort mode of the last position pushed
+      return pos.sportMode;
     } on Exception catch (e) {
       await App().log(e.toString());
     }

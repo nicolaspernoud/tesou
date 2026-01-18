@@ -15,14 +15,15 @@ Future<bool> getPositionAndPushToServer(bool sportMode) async {
     final positions = position.split(":");
     // Push a position to the position queue
     var pos = Position(
-        id: 0,
-        userId: App().prefs.userId,
-        latitude: double.parse(positions[0]),
-        longitude: double.parse(positions[1]),
-        batteryLevel: int.parse(positions[2]),
-        source: "GPS",
-        time: DateTime.now(),
-        sportMode: sportMode);
+      id: 0,
+      userId: App().prefs.userId,
+      latitude: double.parse(positions[0]),
+      longitude: double.parse(positions[1]),
+      batteryLevel: int.parse(positions[2]),
+      source: "GPS",
+      time: DateTime.now(),
+      sportMode: sportMode,
+    );
     await App().log("Got position from GPS");
     return await App().pushPosition(pos);
   } on Exception catch (e) {
@@ -32,13 +33,14 @@ Future<bool> getPositionAndPushToServer(bool sportMode) async {
     var client = http.Client();
     try {
       final String cellInfoJson = await AospLocation.instance.getCellInfo;
-      final response =
-          await client.post(Uri.parse('$base/${App().prefs.userId}'),
-              headers: <String, String>{
-                'Content-Type': 'application/json; charset=UTF-8',
-                'Authorization': "Bearer $token"
-              },
-              body: cellInfoJson);
+      final response = await client.post(
+        Uri.parse('$base/${App().prefs.userId}'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': "Bearer $token",
+        },
+        body: cellInfoJson,
+      );
       if (response.statusCode != 201) {
         throw Exception(response.body.toString());
       }
@@ -50,23 +52,24 @@ Future<bool> getPositionAndPushToServer(bool sportMode) async {
   return false;
 }
 
-Future<Position?> createPositionFromStream(String event) async {
+Future<(Position?, bool)> createPositionFromStream(String event) async {
   await App().init();
   try {
     final positions = event.split(":");
     var pos = Position(
-        id: 0,
-        userId: App().prefs.userId,
-        latitude: double.parse(positions[0]),
-        longitude: double.parse(positions[1]),
-        batteryLevel: int.parse(positions[2]),
-        source: "GPS",
-        time: DateTime.now(),
-        sportMode: true);
-    App().pushPosition(pos);
-    return pos;
+      id: 0,
+      userId: App().prefs.userId,
+      latitude: double.parse(positions[0]),
+      longitude: double.parse(positions[1]),
+      batteryLevel: int.parse(positions[2]),
+      source: "GPS",
+      time: DateTime.now(),
+      sportMode: true,
+    );
+    final bool sportMode = await App().pushPosition(pos);
+    return (pos, sportMode);
   } catch (e) {
     await App().log(e.toString());
-    return null;
+    return (null, false);
   }
 }

@@ -433,11 +433,10 @@ class HomeState extends State<Home>
                                 )
                               : const Icon(Icons.directions_walk),
                           onPressed: () async {
+                            widget.foregroundTaskCommand(!App().sportMode);
                             setState(() {
                               kms = 0;
-                              App().sportMode = !App().sportMode;
                             });
-                            widget.foregroundTaskCommand(App().sportMode);
                           },
                         ),
                         if (!App().sportMode)
@@ -445,7 +444,9 @@ class HomeState extends State<Home>
                             icon: const Icon(Icons.my_location),
                             onPressed: () async {
                               try {
-                                await getPositionAndPushToServer(false);
+                                await getPositionAndPushToServer(
+                                  App().sportMode,
+                                );
                                 await getDataAndMoveToLastPosition();
                               } catch (_) {}
                             },
