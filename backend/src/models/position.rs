@@ -131,10 +131,21 @@ pub async fn create(
     cfg: web::Data<AppConfig>,
     ws_data: web::Data<PositionsServerHandle>,
 ) -> Result<HttpResponse, ServerError> {
+    let mut o = o.into_inner();
+    if o.is_empty() {
+        return Ok(HttpResponse::Ok().finish());
+    }
+    let uid = o[0].user_id;
+    let mut sport_mode_toggle_users = cfg.sport_mode_toggle_users.lock().await;
+    if sport_mode_toggle_users.contains(&uid) {
+        if let Some(last_pos) = o.last_mut() {
+            last_pos.sport_mode = !last_pos.sport_mode;
+        }
+        sport_mode_toggle_users.retain(|&x| x != uid);
+    }
     let mut hm = cfg.user_last_update.lock().await;
     // Filter the positions : remove those that have a timestamp too close to the last update or too close together
-    let uid = o[0].user_id;
-    let o = filter_positions(o.to_owned(), hm.get(&uid).copied(), Some(uid));
+    let o = filter_positions(o, hm.get(&uid).copied(), Some(uid));
     if o.is_empty() {
         return Ok(HttpResponse::Conflict()
             .body("there is already a recorded position in the same second"));

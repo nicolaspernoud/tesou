@@ -5,7 +5,7 @@ use tokio::spawn;
 use crate::{
     app::AppConfig,
     models::{
-        position_tests::position_test, position_ws_tests::position_ws_test, user_tests::user_test,
+        position_tests::position_test, position_ws_tests::position_ws_test, sport_mode_tests::toggle_sport_mode_test, user_tests::user_test
     },
     positions_server::PositionsServer,
     token::token_test,
@@ -38,6 +38,7 @@ async fn test_models() {
     user_test(&pool, &app_data, &server_tx).await;
     position_test(&pool, &app_data, &server_tx).await;
     token_test(&pool, &app_data, &server_tx).await;
+    toggle_sport_mode_test(&pool, &app_data, &server_tx).await;
     tokio::select! {
         _ = position_ws_test(&pool, &app_data, &server_tx) => {}
         _ = positions_server => {}
