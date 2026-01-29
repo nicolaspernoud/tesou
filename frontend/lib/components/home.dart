@@ -420,38 +420,39 @@ class HomeState extends State<Home>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (!kIsWeb) ...[
-                        IconButton(
-                          icon: App().sportMode
-                              ? const CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: Colors.pink,
-                                  child: Icon(
-                                    Icons.directions_run,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.directions_walk),
-                          onPressed: () async {
+                      IconButton(
+                        icon: App().sportMode
+                            ? const CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.pink,
+                                child: Icon(
+                                  Icons.directions_run,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.directions_walk),
+                        onPressed: () async {
+                          if (!kIsWeb && App().prefs.userId == displayedUser) {
                             widget.foregroundTaskCommand(!App().sportMode);
                             setState(() {
                               kms = 0;
                             });
+                          } else {
+                            toggleSportMode(displayedUser);
+                          }
+                        },
+                      ),
+                      if (!kIsWeb && App().sportMode)
+                        IconButton(
+                          icon: const Icon(Icons.my_location),
+                          onPressed: () async {
+                            try {
+                              await getPositionAndPushToServer(App().sportMode);
+                              await getDataAndMoveToLastPosition();
+                            } catch (_) {}
                           },
                         ),
-                        if (!App().sportMode)
-                          IconButton(
-                            icon: const Icon(Icons.my_location),
-                            onPressed: () async {
-                              try {
-                                await getPositionAndPushToServer(
-                                  App().sportMode,
-                                );
-                                await getDataAndMoveToLastPosition();
-                              } catch (_) {}
-                            },
-                          ),
-                      ],
+
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: () async {

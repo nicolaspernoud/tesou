@@ -198,3 +198,21 @@ Future<String> getShareToken(int userId) async {
     rethrow;
   }
 }
+
+Future<String> toggleSportMode(int userId) async {
+  try {
+    final response = await http.Client().post(
+      Uri.parse('${App().prefs.hostname}/api/sport-mode/toggle/$userId'),
+      headers: <String, String>{
+        'Authorization': "Bearer ${App().prefs.token}",
+      },
+    );
+    if (response.statusCode == 200) {
+      return utf8.decode(response.bodyBytes);
+    } else {
+      throw Exception('Failed to toggle sport mode');
+    }
+  } on Exception {
+    rethrow;
+  }
+}
