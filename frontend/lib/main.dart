@@ -114,6 +114,11 @@ class _MyAppState extends State<MyApp> {
       if (position['type'] == 'modeChanged') {
         final bool sportMode = position['sportMode'] as bool;
         App().sportMode = sportMode;
+        FlutterForegroundTask.updateService(
+          foregroundTaskOptions: ForegroundTaskOptions(
+            eventAction: repeatDelay(sportMode),
+          ),
+        );
         return;
       }
 

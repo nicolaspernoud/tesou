@@ -14,8 +14,8 @@ class LocationTaskHandler extends TaskHandler {
   @override
   void onRepeatEvent(DateTime timestamp) async {
     if (App().sportMode) return;
-    final bool nextMode = await getPositionAndPushToServer(App().sportMode);
-    _applyMode(nextMode);
+    final position = await getPositionAndPushToServer(false);
+    _applyMode(position!.sportMode);
   }
 
   @override
@@ -32,12 +32,12 @@ class LocationTaskHandler extends TaskHandler {
     final stream = AospLocation.instance.getPositionStream;
     _streamSubscription = stream.listen((event) async {
       await App().log("Got position event from stream");
-      var (pos, stayInSportMode) = await createPositionFromStream(event);
+      var pos = await createPositionFromStream(event);
       await App().log("Got position from stream : $pos");
       // Send data to the main isolate.
-      FlutterForegroundTask.sendDataToMain(pos!.toJson());
+      FlutterForegroundTask.sendDataToMain(pos.toJson());
       await App().log("Sent position to main isolate");
-      if (!stayInSportMode) {
+      if (!pos.sportMode) {
         _applyMode(false);
       }
     });

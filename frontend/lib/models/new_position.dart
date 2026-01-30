@@ -4,7 +4,7 @@ import 'package:tesou/models/position.dart';
 import 'package:http/http.dart' as http;
 import 'package:aosp_location/aosp_location.dart';
 
-Future<bool> getPositionAndPushToServer(bool sportMode) async {
+Future<Position?> getPositionAndPushToServer(bool sportMode) async {
   await App().init();
 
   await App().log("Getting position...");
@@ -49,10 +49,10 @@ Future<bool> getPositionAndPushToServer(bool sportMode) async {
       await App().log(e.toString());
     }
   }
-  return false;
+  return null;
 }
 
-Future<(Position?, bool)> createPositionFromStream(String event) async {
+Future<Position> createPositionFromStream(String event) async {
   await App().init();
   try {
     final positions = event.split(":");
@@ -66,10 +66,9 @@ Future<(Position?, bool)> createPositionFromStream(String event) async {
       time: DateTime.now(),
       sportMode: true,
     );
-    final bool sportMode = await App().pushPosition(pos);
-    return (pos, sportMode);
+    return await App().pushPosition(pos);
   } catch (e) {
     await App().log(e.toString());
-    return (null, false);
+    rethrow;
   }
 }

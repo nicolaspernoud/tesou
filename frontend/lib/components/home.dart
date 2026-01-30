@@ -63,6 +63,7 @@ class HomeState extends State<Home>
   int missedPoints = 0;
   bool onceOnTrace = false;
   int kms = 0;
+  bool loading = false;
   GeoJsonParser geoJsonParser = GeoJsonParser(
     defaultPolylineColor: Colors.green,
     defaultPolylineStroke: 6.0,
@@ -420,29 +421,50 @@ class HomeState extends State<Home>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: App().sportMode
-                            ? const CircleAvatar(
-                                radius: 40,
-                                backgroundColor: Colors.pink,
-                                child: Icon(
-                                  Icons.directions_run,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.directions_walk),
-                        onPressed: () async {
-                          if (!kIsWeb && App().prefs.userId == displayedUser) {
-                            widget.foregroundTaskCommand(!App().sportMode);
-                            setState(() {
-                              kms = 0;
-                            });
-                          } else {
-                            toggleSportMode(displayedUser);
-                          }
+                      FutureBuilder<List<Position>>(
+                        future: positions,
+                        builder: (context, snapshot) {
+                          final itms = snapshot.data ?? [];
+                          itms.sort((a, b) => b.time.compareTo(a.time));
+                          var sportMode = itms.isNotEmpty
+                              ? itms.first.sportMode
+                              : App().sportMode;
+                          return loading
+                              ? SizedBox(
+                                  width: 25,
+                                  height: 25,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.pink,
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: sportMode
+                                      ? const CircleAvatar(
+                                          radius: 40,
+                                          backgroundColor: Colors.pink,
+                                          child: Icon(
+                                            Icons.directions_run,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.directions_walk),
+                                  onPressed: () async {
+                                    loading = true;
+                                    if (!kIsWeb &&
+                                        App().prefs.userId == displayedUser &&
+                                        !sportMode) {
+                                      widget.foregroundTaskCommand(true);
+                                    } else {
+                                      toggleSportMode(displayedUser);
+                                    }
+                                    setState(() {
+                                      kms = 0;
+                                    });
+                                  },
+                                );
                         },
                       ),
-                      if (!kIsWeb && App().sportMode)
+                      if (!kIsWeb && !App().sportMode)
                         IconButton(
                           icon: const Icon(Icons.my_location),
                           onPressed: () async {
@@ -538,6 +560,7 @@ class HomeState extends State<Home>
   }
 
   Future<void> addLocalPosition(Position pos) async {
+    loading = false;
     if (pos.userId == displayedUser) {
       var itms = await positions;
       setState(() {
