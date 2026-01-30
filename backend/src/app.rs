@@ -19,6 +19,7 @@ pub struct AppConfig {
     pub bearer_token: String,
     pub open_cell_id_api_key: Option<String>,
     pub user_last_update: Mutex<HashMap<i32, i64>>,
+    pub sport_mode_toggle_users: Mutex<Vec<i32>>,
 }
 
 impl AppConfig {
@@ -27,6 +28,7 @@ impl AppConfig {
             bearer_token: token,
             open_cell_id_api_key: api_key,
             user_last_update: Mutex::new(HashMap::new()),
+            sport_mode_toggle_users: Mutex::new(Vec::new()),
         }
     }
 }
@@ -140,10 +142,10 @@ pub fn check_share_token(
         return (false, "token is expired");
     }
     // Check the user id
-    if let Some(user_id) = user_id.map(|x| x.parse::<u16>().unwrap_or(0)) {
-        if user_id != id {
-            return (false, "user ids don't match");
-        }
+    if let Some(user_id) = user_id.map(|x| x.parse::<u16>().unwrap_or(0))
+        && user_id != id
+    {
+        return (false, "user ids don't match");
     }
     (true, "")
 }
@@ -156,7 +158,7 @@ macro_rules! create_app {
         use actix_web::{App, HttpResponse, error::InternalError, middleware, web, web::Data};
         use actix_web_httpauth::middleware::HttpAuthentication;
         use $crate::app::query_string_to_hashmap;
-        use $crate::models::{position, user};
+        use $crate::models::{position, sport_mode, user};
         use $crate::positions_handler::count;
         use $crate::positions_handler::positions_ws_handler;
         use $crate::token;
@@ -254,6 +256,11 @@ macro_rules! create_app {
                     .service(position::delete_all)
                     .service(position::delete)
                     .service(position::create_from_cid),
+            )
+            .service(
+                web::scope("/api/sport-mode")
+                    .wrap(HttpAuthentication::bearer($crate::app::validator))
+                    .service(sport_mode::toggle_sport_mode),
             )
             .service(
                 web::scope("/api/token")

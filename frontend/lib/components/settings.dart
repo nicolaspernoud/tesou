@@ -39,24 +39,32 @@ class SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text(tr(context, "settings")), actions: [
+      appBar: AppBar(
+        title: Text(tr(context, "settings")),
+        actions: [
           IconButton(
             icon: const Icon(Icons.share),
             tooltip: tr(context, "share_my_position"),
             onPressed: () async {
               var token = await getShareToken(App().prefs.userId);
               if (!context.mounted) return;
-              Clipboard.setData(ClipboardData(
+              Clipboard.setData(
+                ClipboardData(
                   text:
-                      "${tr(context, "go_to")}\n\n${App().prefs.hostname.isNotEmpty ? App().prefs.hostname : getOrigin()}?token=${Uri.encodeComponent(token)}&user=${App().prefs.userId}"));
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text(tr(context, "share_info_copied_to_clipboard"))));
+                      "${tr(context, "go_to")}\n\n${App().prefs.hostname.isNotEmpty ? App().prefs.hostname : getOrigin()}?token=${Uri.encodeComponent(token)}&user=${App().prefs.userId}",
+                ),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(tr(context, "share_info_copied_to_clipboard")),
+                ),
+              );
             },
           ),
-        ]),
-        body: Center(
-            child: Padding(
+        ],
+      ),
+      body: Center(
+        child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ListView(
             children: [
@@ -91,8 +99,9 @@ class SettingsState extends State<Settings> {
                     if (snapshot.hasData) {
                       return Column(
                         children: [
-                          ...snapshot.data!.map((a) => Card(
-                                  child: InkWell(
+                          ...snapshot.data!.map(
+                            (a) => Card(
+                              child: InkWell(
                                 splashColor: Colors.blue.withAlpha(30),
                                 onTap: () {
                                   _editUser(a);
@@ -103,15 +112,19 @@ class SettingsState extends State<Settings> {
                                     ListTile(
                                       leading: (App().prefs.userId == a.id)
                                           ? const Icon(
-                                              Icons.radio_button_checked)
+                                              Icons.radio_button_checked,
+                                            )
                                           : const Icon(
-                                              Icons.radio_button_unchecked),
+                                              Icons.radio_button_unchecked,
+                                            ),
                                       title: Text(a.name),
                                       subtitle: Text(a.surname),
                                     ),
                                   ],
                                 ),
-                              ))),
+                              ),
+                            ),
+                          ),
                           Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: IconButton(
@@ -171,19 +184,24 @@ class SettingsState extends State<Settings> {
                     key: Key(_logContent),
                     initialValue: _logContent,
                     maxLines: null,
-                  )
-                ]
+                  ),
+                ],
               ],
             ],
           ),
-        )));
+        ),
+      ),
+    );
   }
 
   Future<void> _editUser(User u) async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (BuildContext context) {
-      return NewEditUser(crud: APICrud<User>(), user: u);
-    }));
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return NewEditUser(crud: APICrud<User>(), user: u);
+        },
+      ),
+    );
     setState(() {
       users = widget.crud.read();
     });
@@ -191,9 +209,7 @@ class SettingsState extends State<Settings> {
 }
 
 class SettingsField extends StatelessWidget {
-  const SettingsField({
-    super.key,
-  });
+  const SettingsField({super.key});
 
   @override
   Widget build(BuildContext context) {

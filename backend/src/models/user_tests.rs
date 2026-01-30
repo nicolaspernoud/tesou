@@ -38,7 +38,7 @@ pub async fn user_test(
         "",
         StatusCode::OK,
         format!(
-            "{{\"id\":{},\"name\":\"Test name\",\"surname\":\"Test surname\"}}",
+            "{{\"id\":{},\"name\":\"Test name\",\"surname\":\"Test surname\",\"switching_mode\":false}}",
             id
         )
     );
@@ -117,7 +117,7 @@ pub async fn user_test(
         "",
         StatusCode::OK,
         format!(
-            "[{{\"id\":{},\"name\":\"01_name\",\"surname\":\"01_description\"}},{{\"id\":{},\"name\":\"02_name\",\"surname\":\"02_description\"}}]",
+            "[{{\"id\":{},\"name\":\"01_name\",\"surname\":\"01_description\",\"switching_mode\":false}},{{\"id\":{},\"name\":\"02_name\",\"surname\":\"02_description\",\"switching_mode\":false}}]",
             id1, id2
         )
     );

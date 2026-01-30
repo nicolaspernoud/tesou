@@ -53,24 +53,28 @@ class App {
     _initialized = true;
   }
 
-  Future<bool> pushPosition(Position pos) async {
+  Future<Position> pushPosition(Position pos) async {
     if (!_initialized) {
       await init();
     }
     // Add the position at the start of the queue
     _positions.push(pos);
     // Filter the queue to discard positions that are too old
-    _positions.removeWhere((element) => element.time
-        .isBefore(DateTime.now().subtract(const Duration(hours: 1))));
+    _positions.removeWhere(
+      (element) => element.time.isBefore(
+        DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+    );
     // Try to push all positions to the server
     try {
-      await APICrud<Position>().createMany(_positions.queue);
+      var result = await APICrud<Position>().createMany(_positions.queue);
       _positions.clear();
-      return true;
+      // We return the last position pushed
+      return result;
     } on Exception catch (e) {
       await App().log(e.toString());
+      rethrow;
     }
-    return false;
   }
 }
 
@@ -97,9 +101,9 @@ class PositionQueue extends LocalFilePersister {
   @override
   void fromJson(String source) {
     try {
-      queue = List<Position>.from(json
-          .decode(source)["positions"]
-          .map((data) => Position.fromJson(data)));
+      queue = List<Position>.from(
+        json.decode(source)["positions"].map((data) => Position.fromJson(data)),
+      );
     } catch (e) {
       if (kDebugMode) {
         print("e");

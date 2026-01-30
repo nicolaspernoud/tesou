@@ -13,8 +13,7 @@ import 'package:tesou/i18n.dart';
 import 'package:tesou/models/crud.dart';
 import 'package:tesou/models/position.dart';
 import 'package:tesou/models/user.dart';
-import 'package:tesou/normal_task_handler.dart';
-import 'package:tesou/sport_task_handler.dart';
+import 'package:tesou/location_task_handler.dart';
 import 'package:tesou/url_parser/url_parser.dart';
 
 late TesouAudioHandler _audioHandler;
@@ -43,13 +42,8 @@ Future<void> main() async {
 }
 
 @pragma('vm:entry-point')
-void normalModeCallback() {
-  FlutterForegroundTask.setTaskHandler(NormalTaskHandler());
-}
-
-@pragma('vm:entry-point')
-void sportModeCallback() {
-  FlutterForegroundTask.setTaskHandler(SportTaskHandler());
+void locationTaskCallback() {
+  FlutterForegroundTask.setTaskHandler(LocationTaskHandler());
 }
 
 class MyApp extends StatefulWidget {
@@ -102,7 +96,7 @@ class _MyAppState extends State<MyApp> {
         crud: positionCrud,
         title: 'Tesou!',
         usersCrud: userCrud,
-        foregroundTaskCommand: _updateService, //_startForegroundTask,
+        foregroundTaskCommand: _updateService,
         audioHandler: _audioHandler,
         sharedPosition: sharedPosition,
       ),
@@ -117,9 +111,17 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _onReceiveTaskData(Object position) async {
     if (position is Map<String, dynamic>) {
-      await App().log(
-        'Received position from stream into main isolate : $position',
-      );
+      if (position['type'] == 'modeChanged') {
+        final bool sportMode = position['sportMode'] as bool;
+        App().sportMode = sportMode;
+        FlutterForegroundTask.updateService(
+          foregroundTaskOptions: ForegroundTaskOptions(
+            eventAction: repeatDelay(sportMode),
+          ),
+        );
+        return;
+      }
+
       await _homeState.currentState?.addLocalPosition(
         Position.fromJson(position),
       );
@@ -156,7 +158,7 @@ class _MyAppState extends State<MyApp> {
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: repeatDelay(false),
+        eventAction: repeatDelay(App().sportMode),
         autoRunOnBoot: true,
         autoRunOnMyPackageReplaced: true,
         allowWakeLock: true,
@@ -184,7 +186,7 @@ class _MyAppState extends State<MyApp> {
           metaDataName: 'fr.ninico.tesou.NOTIFICATION_ICON',
           backgroundColor: Colors.green,
         ),
-        callback: normalModeCallback,
+        callback: locationTaskCallback,
       );
     }
   }
@@ -194,7 +196,11 @@ class _MyAppState extends State<MyApp> {
       foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: repeatDelay(sportMode),
       ),
-      callback: sportMode ? sportModeCallback : normalModeCallback,
     );
+
+    FlutterForegroundTask.sendDataToTask({
+      'command': 'setSportMode',
+      'sportMode': sportMode,
+    });
   }
 }

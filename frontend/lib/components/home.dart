@@ -63,6 +63,7 @@ class HomeState extends State<Home>
   int missedPoints = 0;
   bool onceOnTrace = false;
   int kms = 0;
+  bool switchingMode = false;
   GeoJsonParser geoJsonParser = GeoJsonParser(
     defaultPolylineColor: Colors.green,
     defaultPolylineStroke: 6.0,
@@ -171,6 +172,10 @@ class HomeState extends State<Home>
   void getData() {
     positions = widget.crud.read("user_id=$displayedUser");
     users = widget.usersCrud.read();
+    users.then((userList) {
+      User? u = userList.firstWhere((element) => element.id == displayedUser);
+      switchingMode = u.switchingMode;
+    });
     if (App().prefs.userId != displayedUser || kIsWeb) {
       connectWsChannel();
     } else {
@@ -420,37 +425,82 @@ class HomeState extends State<Home>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (!kIsWeb) ...[
-                        IconButton(
-                          icon: App().sportMode
-                              ? const CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: Colors.pink,
-                                  child: Icon(
-                                    Icons.directions_run,
-                                    color: Colors.white,
+                      if (App().hasToken)
+                        FutureBuilder<List<Position>>(
+                          future: positions,
+                          builder: (context, snapshot) {
+                            final itms = snapshot.data ?? [];
+                            itms.sort((a, b) => b.time.compareTo(a.time));
+                            var sportMode =
+                                (App().prefs.userId == displayedUser && !kIsWeb)
+                                ? App().sportMode
+                                : itms.isNotEmpty
+                                ? itms.first.sportMode
+                                : App().sportMode;
+                            return Stack(
+                              alignment: AlignmentGeometry.center,
+                              children: [
+                                if (switchingMode)
+                                  SizedBox(
+                                    width: 25,
+                                    height: 25,
+                                    child: CircularProgressIndicator(
+                                      color: !sportMode
+                                          ? Colors.pink
+                                          : Colors.grey.shade700,
+                                      strokeWidth: 3,
+                                    ),
                                   ),
-                                )
-                              : const Icon(Icons.directions_walk),
-                          onPressed: () async {
-                            setState(() {
-                              kms = 0;
-                              App().sportMode = !App().sportMode;
-                            });
-                            widget.foregroundTaskCommand(App().sportMode);
+                                IconButton(
+                                  icon: CircleAvatar(
+                                    radius: 15,
+                                    backgroundColor: sportMode
+                                        ? Colors.pink
+                                        : Colors.grey.shade400,
+                                    child: Icon(
+                                      sportMode
+                                          ? Icons.directions_run
+                                          : Icons.directions_walk,
+                                      color: sportMode ? Colors.white : null,
+                                    ),
+                                  ),
+                                  onPressed:
+                                      switchingMode &&
+                                          kIsWeb &&
+                                          App().prefs.userId != displayedUser
+                                      ? null
+                                      : () async {
+                                          if (!kIsWeb &&
+                                              App().prefs.userId ==
+                                                  displayedUser &&
+                                              !sportMode) {
+                                            widget.foregroundTaskCommand(true);
+                                          } else {
+                                            toggleSportMode(displayedUser);
+                                          }
+                                          setState(() {
+                                            switchingMode = true;
+                                            kms = 0;
+                                          });
+                                        },
+                                ),
+                              ],
+                            );
                           },
                         ),
-                        if (!App().sportMode)
-                          IconButton(
-                            icon: const Icon(Icons.my_location),
-                            onPressed: () async {
-                              try {
-                                await getPositionAndPushToServer(false);
-                                await getDataAndMoveToLastPosition();
-                              } catch (_) {}
-                            },
-                          ),
-                      ],
+                      if (!kIsWeb)
+                        IconButton(
+                          icon: const Icon(Icons.my_location),
+                          onPressed: App().sportMode
+                              ? null
+                              : () async {
+                                  try {
+                                    await getPositionAndPushToServer(false);
+                                    await getDataAndMoveToLastPosition();
+                                  } catch (_) {}
+                                },
+                        ),
+
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: () async {
@@ -514,6 +564,7 @@ class HomeState extends State<Home>
         itms.insert(0, pos);
         if (itms.isNotEmpty) {
           setState(() {
+            switchingMode = false;
             positions = Future.value(itms);
           });
           centerView(itms);
@@ -539,6 +590,7 @@ class HomeState extends State<Home>
     if (pos.userId == displayedUser) {
       var itms = await positions;
       setState(() {
+        switchingMode = false;
         itms.insert(0, pos);
         positions = Future.value(itms);
       });

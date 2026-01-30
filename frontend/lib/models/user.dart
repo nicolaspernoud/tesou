@@ -3,20 +3,18 @@ import 'package:tesou/models/crud.dart';
 class User extends Serialisable {
   String name;
   String surname;
+  bool switchingMode;
 
   User({
     required super.id,
     required this.name,
     required this.surname,
+    this.switchingMode = false,
   });
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      if (id > 0) 'id': id,
-      'name': name,
-      'surname': surname,
-    };
+    return {if (id > 0) 'id': id, 'name': name, 'surname': surname};
   }
 
   factory User.fromJson(Map<String, dynamic> data) {
@@ -24,6 +22,7 @@ class User extends Serialisable {
       id: data['id'],
       name: data['name'],
       surname: data['surname'],
+      switchingMode: data['switching_mode'] ?? false,
     );
   }
 

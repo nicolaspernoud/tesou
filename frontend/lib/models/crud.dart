@@ -31,9 +31,7 @@ String routeByType(Type t) {
 }
 
 abstract class Serialisable {
-  Serialisable({
-    required this.id,
-  });
+  Serialisable({required this.id});
 
   void fromJson(Map<String, dynamic> json) {}
   int id = 0;
@@ -75,7 +73,7 @@ class APICrud<T extends Serialisable> extends Crud<T> {
         Uri.parse('$base/$route'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': "Bearer $token"
+          'Authorization': "Bearer $token",
         },
         body: jsonEncode(val),
       );
@@ -87,18 +85,20 @@ class APICrud<T extends Serialisable> extends Crud<T> {
     }
   }
 
-  Future<dynamic> createMany(List<T> val) async {
+  Future<T> createMany(List<T> val) async {
     try {
       final response = await client.post(
         Uri.parse('$base/$route'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': "Bearer $token"
+          'Authorization': "Bearer $token",
         },
         body: jsonEncode(val),
       );
       if (response.statusCode == 201) {
         return fromJSONbyType(T, json.decode(utf8.decode(response.bodyBytes)));
+      } else {
+        throw Exception(response.body.toString());
       }
     } on Exception {
       rethrow;
@@ -112,7 +112,7 @@ class APICrud<T extends Serialisable> extends Crud<T> {
         Uri.parse('$base/$route/${id.toString()}'),
         headers: <String, String>{
           'Authorization': "Bearer $token",
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
       );
       if (response.statusCode == 200) {
@@ -153,7 +153,7 @@ class APICrud<T extends Serialisable> extends Crud<T> {
         Uri.parse('$base/$route/${val.id}'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': "Bearer $token"
+          'Authorization': "Bearer $token",
         },
         body: jsonEncode(val),
       );
@@ -185,14 +185,28 @@ Future<String> getShareToken(int userId) async {
   try {
     final response = await http.Client().get(
       Uri.parse('${App().prefs.hostname}/api/token?user_id=$userId'),
-      headers: <String, String>{
-        'Authorization': "Bearer ${App().prefs.token}",
-      },
+      headers: <String, String>{'Authorization': "Bearer ${App().prefs.token}"},
     );
     if (response.statusCode == 200) {
       return utf8.decode(response.bodyBytes);
     } else {
       throw Exception('Failed to get token');
+    }
+  } on Exception {
+    rethrow;
+  }
+}
+
+Future<String> toggleSportMode(int userId) async {
+  try {
+    final response = await http.Client().post(
+      Uri.parse('${App().prefs.hostname}/api/sport-mode/toggle/$userId'),
+      headers: <String, String>{'Authorization': "Bearer ${App().prefs.token}"},
+    );
+    if (response.statusCode == 200) {
+      return utf8.decode(response.bodyBytes);
+    } else {
+      throw Exception('Failed to toggle sport mode');
     }
   } on Exception {
     rethrow;

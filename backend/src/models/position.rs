@@ -131,10 +131,21 @@ pub async fn create(
     cfg: web::Data<AppConfig>,
     ws_data: web::Data<PositionsServerHandle>,
 ) -> Result<HttpResponse, ServerError> {
+    let mut o = o.into_inner();
+    if o.is_empty() {
+        return Ok(HttpResponse::Ok().finish());
+    }
+    let uid = o[0].user_id;
+    let mut sport_mode_toggle_users = cfg.sport_mode_toggle_users.lock().await;
+    if sport_mode_toggle_users.contains(&uid) {
+        if let Some(last_pos) = o.last_mut() {
+            last_pos.sport_mode = !last_pos.sport_mode;
+        }
+        sport_mode_toggle_users.retain(|&x| x != uid);
+    }
     let mut hm = cfg.user_last_update.lock().await;
     // Filter the positions : remove those that have a timestamp too close to the last update or too close together
-    let uid = o[0].user_id;
-    let o = filter_positions(o.to_owned(), hm.get(&uid).copied(), Some(uid));
+    let o = filter_positions(o, hm.get(&uid).copied(), Some(uid));
     if o.is_empty() {
         return Ok(HttpResponse::Conflict()
             .body("there is already a recorded position in the same second"));
@@ -211,10 +222,10 @@ pub async fn read_filter(
     if let Ok(object) = object {
         Ok(HttpResponse::Ok().json(object))
     } else {
-            let res = HttpResponse::NotFound().body("No objects found");
-            Ok(res)
-        }
+        let res = HttpResponse::NotFound().body("No objects found");
+        Ok(res)
     }
+}
 
 crud_update!(Position, positions, User, users, user_id);
 crud_delete_all!(Position, positions);
@@ -273,11 +284,11 @@ pub async fn create_from_cid(
         battery_level: cell_id.battery_level,
         sport_mode: false,
     };
-    if let Some(last_update) = hm.get(&o.user_id) {
-        if (o.time - last_update).abs() < MINIMUM_TIME_GAP {
-            return Ok(HttpResponse::Conflict()
-                .body("there is already a recorded position in the same second"));
-        }
+    if let Some(last_update) = hm.get(&o.user_id)
+        && (o.time - last_update).abs() < MINIMUM_TIME_GAP
+    {
+        return Ok(HttpResponse::Conflict()
+            .body("there is already a recorded position in the same second"));
     }
     if cell_id.lat != -1 {
         o.latitude = (cell_id.lat / 1296000) as f64;
