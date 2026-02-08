@@ -135,9 +135,6 @@ class _MyAppState extends State<MyApp> {
       await FlutterForegroundTask.requestNotificationPermission();
     }
     if (Platform.isAndroid) {
-      if (!await FlutterForegroundTask.canDrawOverlays) {
-        await FlutterForegroundTask.openSystemAlertWindowSettings();
-      }
       if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
         await FlutterForegroundTask.requestIgnoreBatteryOptimization();
       }
@@ -158,7 +155,7 @@ class _MyAppState extends State<MyApp> {
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: repeatDelay(App().sportMode),
+        eventAction: repeatDelay(false),
         autoRunOnBoot: true,
         autoRunOnMyPackageReplaced: true,
         allowWakeLock: true,
@@ -169,7 +166,7 @@ class _MyAppState extends State<MyApp> {
 
   ForegroundTaskEventAction repeatDelay(bool sportMode) {
     return sportMode
-        ? ForegroundTaskEventAction.repeat(30 * 60 * 1000)
+        ? ForegroundTaskEventAction.nothing()
         : ForegroundTaskEventAction.repeat(5 * 60 * 1000);
   }
 

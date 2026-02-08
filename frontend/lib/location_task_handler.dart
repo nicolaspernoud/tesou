@@ -13,9 +13,13 @@ class LocationTaskHandler extends TaskHandler {
 
   @override
   void onRepeatEvent(DateTime timestamp) async {
-    if (App().sportMode) return;
     final position = await getPositionAndPushToServer(false);
     _applyMode(position!.sportMode);
+  }
+
+  @override
+  void onNotificationDismissed() {
+    FlutterForegroundTask.updateService();
   }
 
   @override
