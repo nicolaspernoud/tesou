@@ -9,7 +9,7 @@ use std::{
     },
 };
 
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use tokio::sync::{mpsc, oneshot};
 
 // connection ID

@@ -105,9 +105,9 @@ abstract class LocalFilePersister {
 
   Future<File> get localFile async {
     if (Platform.isAndroid) {
-      final directory = await getExternalStorageDirectory();
-      await Directory('${directory?.path}').create(recursive: true);
-      return File('${directory?.path}/${_fileName()}');
+      final directory = await getApplicationSupportDirectory();
+      await Directory(directory.path).create(recursive: true);
+      return File('${directory.path}/${_fileName()}');
     }
     final directory = await getApplicationDocumentsDirectory();
     return File('${directory.path}/${_fileName()}');

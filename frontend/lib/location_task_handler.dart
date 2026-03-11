@@ -9,14 +9,22 @@ class LocationTaskHandler extends TaskHandler {
   StreamSubscription<String>? _streamSubscription;
 
   @override
-  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    onRepeatEvent(timestamp);
+  }
 
   @override
   void onRepeatEvent(DateTime timestamp) async {
-    if (App().sportMode) return;
     final position = await getPositionAndPushToServer(false);
-    _applyMode(position!.sportMode);
+    if (position != null) {
+      _applyMode(position.sportMode);
+    }
   }
+
+  /*@override
+  void onNotificationDismissed() {
+    FlutterForegroundTask.updateService();
+  }*/
 
   @override
   void onReceiveData(Object data) {

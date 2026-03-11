@@ -28,14 +28,15 @@ Future<void> main() async {
       await [Permission.location, Permission.phone].request();
       await Permission.locationAlways.request();
     }
+    FlutterForegroundTask.initCommunicationPort();
+    _initService();
+    _startService();
   }
-  if (!kIsWeb) FlutterForegroundTask.initCommunicationPort();
   _audioHandler = await AudioService.init(
     builder: () => TesouAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'fr.ninico.tesou.channel.audio',
       androidNotificationChannelName: 'Audio playback',
-      //androidNotificationOngoing: true,
     ),
   );
   runApp(const MyApp());
@@ -65,9 +66,10 @@ class _MyAppState extends State<MyApp> {
       sharedPosition = SharedPosition.fromUrl();
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _requestPermissions();
-        _initService();
-        _startService();
+        if (await _requestPermissions()) {
+          _initService();
+          _startService();
+        }
       });
       FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
     }
@@ -127,80 +129,82 @@ class _MyAppState extends State<MyApp> {
       );
     }
   }
+}
 
-  Future<void> _requestPermissions() async {
-    final NotificationPermission notificationPermission =
-        await FlutterForegroundTask.checkNotificationPermission();
-    if (notificationPermission != NotificationPermission.granted) {
-      await FlutterForegroundTask.requestNotificationPermission();
-    }
-    if (Platform.isAndroid) {
-      if (!await FlutterForegroundTask.canDrawOverlays) {
-        await FlutterForegroundTask.openSystemAlertWindowSettings();
-      }
-      if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-      }
+Future<bool> _requestPermissions() async {
+  var permissionsChanged = false;
+  final NotificationPermission notificationPermission =
+      await FlutterForegroundTask.checkNotificationPermission();
+  if (notificationPermission != NotificationPermission.granted) {
+    await FlutterForegroundTask.requestNotificationPermission();
+    permissionsChanged = true;
+  }
+  if (Platform.isAndroid) {
+    if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
+      await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+      permissionsChanged = true;
     }
   }
+  return permissionsChanged;
+}
 
-  void _initService() {
-    FlutterForegroundTask.init(
-      androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'tesou',
-        channelName: 'tesou',
-        channelDescription: 'tesou location service',
-        channelImportance: NotificationChannelImportance.LOW,
-        priority: NotificationPriority.LOW,
+void _initService() {
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'tesou',
+      channelName: 'tesou',
+      channelDescription: 'tesou location service',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: false,
+      playSound: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: repeatDelay(false),
+      autoRunOnBoot: true,
+      autoRunOnMyPackageReplaced: true,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
+}
+
+ForegroundTaskEventAction repeatDelay(bool sportMode) {
+  return sportMode
+      ? ForegroundTaskEventAction.nothing()
+      : ForegroundTaskEventAction.repeat(5 * 60 * 1000);
+}
+
+Future<ServiceRequestResult> _startService() async {
+  if (await FlutterForegroundTask.isRunningService) {
+    return FlutterForegroundTask.restartService();
+  } else {
+    var locale = PlatformDispatcher.instance.locale;
+    return FlutterForegroundTask.startService(
+      serviceTypes: [ForegroundServiceTypes.location],
+      serviceId: 256,
+      notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
+      notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
+      notificationIcon: const NotificationIcon(
+        metaDataName: 'fr.ninico.tesou.NOTIFICATION_ICON',
+        backgroundColor: Colors.green,
       ),
-      iosNotificationOptions: const IOSNotificationOptions(
-        showNotification: false,
-        playSound: false,
-      ),
-      foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: repeatDelay(App().sportMode),
-        autoRunOnBoot: true,
-        autoRunOnMyPackageReplaced: true,
-        allowWakeLock: true,
-        allowWifiLock: true,
-      ),
+      callback: locationTaskCallback,
     );
   }
+}
 
-  ForegroundTaskEventAction repeatDelay(bool sportMode) {
-    return sportMode
-        ? ForegroundTaskEventAction.repeat(30 * 60 * 1000)
-        : ForegroundTaskEventAction.repeat(5 * 60 * 1000);
-  }
+void _updateService(bool sportMode) {
+  FlutterForegroundTask.updateService(
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: repeatDelay(sportMode),
+    ),
+  );
 
-  Future<ServiceRequestResult> _startService() async {
-    if (await FlutterForegroundTask.isRunningService) {
-      return FlutterForegroundTask.restartService();
-    } else {
-      var locale = PlatformDispatcher.instance.locale;
-      return FlutterForegroundTask.startService(
-        serviceId: 256,
-        notificationTitle: MyLocalizations(locale).tr("tesou_is_running"),
-        notificationText: MyLocalizations(locale).tr("tap_to_return_to_app"),
-        notificationIcon: const NotificationIcon(
-          metaDataName: 'fr.ninico.tesou.NOTIFICATION_ICON',
-          backgroundColor: Colors.green,
-        ),
-        callback: locationTaskCallback,
-      );
-    }
-  }
-
-  void _updateService(bool sportMode) {
-    FlutterForegroundTask.updateService(
-      foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: repeatDelay(sportMode),
-      ),
-    );
-
-    FlutterForegroundTask.sendDataToTask({
-      'command': 'setSportMode',
-      'sportMode': sportMode,
-    });
-  }
+  FlutterForegroundTask.sendDataToTask({
+    'command': 'setSportMode',
+    'sportMode': sportMode,
+  });
 }

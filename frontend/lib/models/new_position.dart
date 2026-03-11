@@ -11,7 +11,7 @@ Future<Position?> getPositionAndPushToServer(bool sportMode) async {
   try {
     final String position = await AospLocation.instance.getPositionFromGPS;
     // Fast mock for Debugging
-    //final String position ='${45.50 + Random().nextDouble() / 50}:${4.835659 + Random().nextDouble() / 50}:50';
+    ///final String position = '${45.50 + Random().nextDouble() / 50}:${4.835659 + Random().nextDouble() / 50}:50';
     final positions = position.split(":");
     // Push a position to the position queue
     var pos = Position(
