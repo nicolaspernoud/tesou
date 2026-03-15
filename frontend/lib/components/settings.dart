@@ -217,7 +217,7 @@ class SettingsField extends StatelessWidget {
       children: [
         if (!kIsWeb || kDebugMode)
           TextFormField(
-            initialValue: App().prefs.hostname,
+            initialValue: App().prefs.hostname != "" ? App().prefs.hostname : "https://",
             // initialValue: App().prefs.hostname != "" ? App().prefs.hostname : "http://10.0.2.2:8080-",
             decoration: InputDecoration(labelText: tr(context, "hostname")),
             onChanged: (text) {
