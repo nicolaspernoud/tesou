@@ -36,7 +36,7 @@ class TesouDeviceTracker(TrackerEntity):
         self._entry = entry
         self.api = api
         self._data = data
-        self.latlong: tuple[float, float] = (0, 0)
+        self.latlong: tuple[float, float] | None = None
 
     @property
     def should_poll(self) -> bool:
@@ -46,12 +46,16 @@ class TesouDeviceTracker(TrackerEntity):
     @property
     def latitude(self) -> float | None:
         """Return latitude value of the device."""
-        return self.latlong[0]
+        if self.latlong is not None:
+            return self.latlong[0]
+        return None
 
     @property
     def longitude(self) -> float | None:
         """Return longitude value of the device."""
-        return self.latlong[1]
+        if self.latlong is not None:
+            return self.latlong[1]
+        return None
 
     @property
     def source_type(self) -> SourceType:
@@ -63,5 +67,3 @@ class TesouDeviceTracker(TrackerEntity):
         pos = await self.api.get_latest_gps_position(self.user)
         if pos is not None:
             self.latlong = pos.latitude, pos.longitude
-        else:
-            raise ConnectionError

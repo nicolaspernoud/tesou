@@ -57,16 +57,14 @@ class TesouApi:
         async with aiohttp.ClientSession() as session, session.get(
             url, headers=headers
         ) as response:
-            if response.status == 200:
-                # Assuming the response is a JSON array of users
-                users_data = await response.json()
-                users = [
-                    User(user_id=user["id"], name=user["name"], surname=user["surname"])
-                    for user in users_data
-                ]
-                return users
-            # Handle other status codes if needed
-            return []
+            response.raise_for_status()
+            # Assuming the response is a JSON array of users
+            users_data = await response.json()
+            users = [
+                User(user_id=user["id"], name=user["name"], surname=user["surname"])
+                for user in users_data
+            ]
+            return users
 
     async def get_latest_gps_position(self, user: User) -> Position | None:
         """Retrieve the latest GPS position for a user."""
@@ -78,23 +76,21 @@ class TesouApi:
         async with aiohttp.ClientSession() as session, session.get(
             url, headers=headers
         ) as response:
-            if response.status == 200:
-                # Assuming the response is a JSON array of positions
-                positions_data = await response.json()
-                gps_positions = [
-                    Position(
-                        pos_id=position["id"],
-                        **{k: position[k] for k in position if k != "id"},
-                    )
-                    for position in positions_data
-                    if position["source"] == "GPS"
-                ]
-                # Find the position with the greatest ID
-                return max(
-                    gps_positions, key=lambda position: position.id, default=None
+            response.raise_for_status()
+            # Assuming the response is a JSON array of positions
+            positions_data = await response.json()
+            gps_positions = [
+                Position(
+                    pos_id=position["id"],
+                    **{k: position[k] for k in position if k != "id"},
                 )
-            # Handle other status codes if needed
-            return None
+                for position in positions_data
+                if position["source"] == "GPS"
+            ]
+            # Find the position with the greatest ID
+            return max(
+                gps_positions, key=lambda position: position.id, default=None
+            )
 
 
 # async def main():
