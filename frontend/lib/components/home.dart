@@ -330,7 +330,7 @@ class HomeState extends State<Home>
                                   // Draw a line with the last positions coming from GPS
                                   PolylineLayer(
                                     polylines: [
-                                      if (trace != null) ...trace!,
+                                      ...?trace,
                                       if (normalPoints.isNotEmpty)
                                         Polyline(
                                           points: normalPoints,
@@ -639,7 +639,7 @@ class HomeState extends State<Home>
 
   Future<void> openFilePickerAndReadTrace() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.any,
         withData: true,
       );
