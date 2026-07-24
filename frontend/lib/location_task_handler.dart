@@ -15,9 +15,13 @@ class LocationTaskHandler extends TaskHandler {
 
   @override
   void onRepeatEvent(DateTime timestamp) async {
-    final position = await getPositionAndPushToServer(false);
-    if (position != null) {
-      _applyMode(position.sportMode);
+    try {
+      final position = await getPositionAndPushToServer(false);
+      if (position != null) {
+        _applyMode(position.sportMode);
+      }
+    } catch (e) {
+      await App().log("Error in onRepeatEvent: $e");
     }
   }
 
@@ -39,14 +43,18 @@ class LocationTaskHandler extends TaskHandler {
   void _startStream() {
     final stream = AospLocation.instance.getPositionStream;
     _streamSubscription = stream.listen((event) async {
-      await App().log("Got position event from stream");
-      var pos = await createPositionFromStream(event);
-      await App().log("Got position from stream : $pos");
-      // Send data to the main isolate.
-      FlutterForegroundTask.sendDataToMain(pos.toJson());
-      await App().log("Sent position to main isolate");
-      if (!pos.sportMode) {
-        _applyMode(false);
+      try {
+        await App().log("Got position event from stream");
+        var pos = await createPositionFromStream(event);
+        await App().log("Got position from stream : $pos");
+        // Send data to the main isolate.
+        FlutterForegroundTask.sendDataToMain(pos.toJson());
+        await App().log("Sent position to main isolate");
+        if (!pos.sportMode) {
+          _applyMode(false);
+        }
+      } catch (e) {
+        await App().log("Error in position stream listener: $e");
       }
     });
   }

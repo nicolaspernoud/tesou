@@ -1,8 +1,9 @@
 use actix_web::{HttpResponse, Responder, Result, get, web};
 use base64ct::{Base64, Encoding};
+use chacha20poly1305::aead::Generate;
 use chacha20poly1305::{
-    ChaCha20Poly1305,
-    aead::{Aead, AeadCore, KeyInit, OsRng},
+    ChaCha20Poly1305, Nonce,
+    aead::{Aead, KeyInit},
 };
 use log::debug;
 use sha2::{Digest, Sha256};
@@ -37,7 +38,7 @@ pub async fn get(
 
     // Encrypt message
     let cipher = ChaCha20Poly1305::new(&key.into());
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
+    let nonce = Nonce::generate(); // 96-bits; unique per message
     debug!("Creating token, nonce = {:?}", nonce);
     let mut ciphertext = cipher.encrypt(&nonce, data.as_ref())?;
     debug!("Creating token, ciphertext = {:?}", ciphertext);

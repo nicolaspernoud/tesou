@@ -641,11 +641,10 @@ class HomeState extends State<Home>
     try {
       FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.any,
-        withData: true,
       );
 
       if (result != null && result.files.single.extension != null) {
-        String fileContent = String.fromCharCodes(result.files.single.bytes!);
+        String fileContent = String.fromCharCodes(await result.files.single.readAsBytes());
         switch (result.files.single.extension!.toLowerCase()) {
           case 'gpx':
             var traceXml = await GeoXml.fromGpxString(fileContent);

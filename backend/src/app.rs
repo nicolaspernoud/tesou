@@ -3,8 +3,7 @@ use actix_web::http::Method;
 use actix_web::{Error, dev::ServiceRequest};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use base64ct::{Base64, Encoding};
-use chacha20poly1305::aead::generic_array::GenericArray;
-use chacha20poly1305::consts::U12;
+use chacha20poly1305::Nonce;
 use chacha20poly1305::{
     ChaCha20Poly1305,
     aead::{Aead, KeyInit},
@@ -106,7 +105,12 @@ pub fn check_share_token(
     if binary_token.len() < 12 {
         return (false, "Wrong token!");
     }
-    let nonce: GenericArray<_, U12> = GenericArray::clone_from_slice(&binary_token[..12]);
+    let nonce: Nonce = match Nonce::try_from(&binary_token[..12]) {
+        Ok(n) => n,
+        Err(_) => {
+            return (false, "could not decode token into nonce");
+        }
+    };
     let data = match cipher.decrypt(&nonce, &binary_token[12..]) {
         Ok(val) => val,
         Err(_) => {

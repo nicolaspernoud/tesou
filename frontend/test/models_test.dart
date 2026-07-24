@@ -4,8 +4,11 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tesou/models/user.dart';
 import 'package:tesou/models/position.dart';
+import 'package:tesou/models/new_position.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Serialization', () {
     test(
         'Converting an User to json an retrieving it should give the same User',
@@ -32,6 +35,19 @@ void main() {
       final a1Json = jsonEncode(i1.toJson());
       final i2 = Position.fromJson(json.decode(a1Json));
       expect(i1, i2);
+    });
+
+    test(
+        'createPositionFromStream handles push exceptions gracefully and returns local position',
+        () async {
+      // Under FLUTTER_TEST, pushing to server throws a MockAPI 404 Exception.
+      // This test ensures we catch that exception and still return the successfully parsed Position.
+      final pos = await createPositionFromStream("45.75:4.85:80");
+      expect(pos.latitude, 45.75);
+      expect(pos.longitude, 4.85);
+      expect(pos.batteryLevel, 80);
+      expect(pos.source, "GPS");
+      expect(pos.sportMode, true);
     });
   });
 }
