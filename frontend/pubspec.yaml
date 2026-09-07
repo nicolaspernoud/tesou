@@ -33,19 +33,21 @@ dependencies:
   aosp_location:
     path: aosp_location
   audio_service: ^0.18.19
-  flutter_foreground_task: ^10.0.0
+  flutter_foreground_task: ^11.0.3
   flutter_localizations:
     sdk: flutter
-  flutter_map: ^8.3.1
+  flutter_map: ^8.3.2
   # TEMPORARY
   flutter_map_geojson:
-    git: https://github.com/NomiAdam/flutter_map_geojson
-  intl: ^0.20.2
-  html: 0.15.6
+    git:
+      url: https://github.com/dominoc/flutter_map_geojson
+      ref: dominoc-patch-1
+  intl: ^0.20.3
+  html: 0.15.7
   http: 1.6.0
-  latlong2: ^0.9.1
+  latlong2: ^0.10.1
   path_provider: ^2.1.6
-  permission_handler: ^12.0.3
+  permission_handler: ^13.0.2
   shared_preferences: ^2.5.5
   url_launcher: 6.3.2
   web_socket_channel: 3.0.3

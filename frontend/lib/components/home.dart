@@ -639,13 +639,10 @@ class HomeState extends State<Home>
 
   Future<void> openFilePickerAndReadTrace() async {
     try {
-      FilePickerResult? result = await FilePicker.pickFiles(
-        type: FileType.any,
-      );
-
-      if (result != null && result.files.single.extension != null) {
-        String fileContent = String.fromCharCodes(await result.files.single.readAsBytes());
-        switch (result.files.single.extension!.toLowerCase()) {
+      PlatformFile? file = await FilePicker.pickFile(type: FileType.any);
+      if (file != null && file.extension != null) {
+        String fileContent = String.fromCharCodes(await file.readAsBytes());
+        switch (file.extension!.toLowerCase()) {
           case 'gpx':
             var traceXml = await GeoXml.fromGpxString(fileContent);
             setState(() {
