@@ -24,10 +24,14 @@ class MyLocalizations {
       "get_latest_release": "Get latest release from GitHub",
       "go_to": "To access my shared position (for 2 hours), go to the website",
       "hostname": "Hostname",
+      "load_trace": "Open trace",
+      "my_location": "My location",
       "name": "Name",
       "new_user": "New user",
       "no_users": "No users",
       "please_enter_some_text": "Please enter some text",
+      "refresh": "Refresh data",
+      "save_trace": "Save trace",
       "settings": "Settings",
       "share_my_position": "Share my position",
       "share_info_copied_to_clipboard": "Share info copied to clipboard...",
@@ -40,7 +44,7 @@ class MyLocalizations {
       "user": "User",
       "user_created": "User created",
       "user_deleted": "User deleted",
-      "users": "Users"
+      "users": "Users",
     },
     'fr': {
       "active_user": "Utilisateur actif",
@@ -50,10 +54,14 @@ class MyLocalizations {
       "go_to":
           "Pour voir ma position en temps réel (pendant 2 heures), aller sur le site",
       "hostname": "Serveur",
+      "load_trace": "Charger une trace",
+      "my_location": "Ma position",
       "name": "Prénom",
       "new_user": "Nouvel utilisateur",
       "no_users": "Aucun utilisateur",
       "please_enter_some_text": "Veuillez entrer du texte'",
+      "refresh": "Rafraîchir les données",
+      "save_trace": "Enregistrer la trace",
       "settings": "Paramètres",
       "share_my_position": "Partager ma position",
       "share_info_copied_to_clipboard":
@@ -67,7 +75,7 @@ class MyLocalizations {
       "user": "Utilisateur",
       "user_created": "Utilisateur créé",
       "user_deleted": "Utilisateur supprimé",
-      "users": "Utilisateurs"
+      "users": "Utilisateurs",
     },
   };
 

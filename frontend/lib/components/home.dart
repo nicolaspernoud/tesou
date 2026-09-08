@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_map_geojson/flutter_map_geojson.dart';
@@ -425,6 +426,60 @@ class HomeState extends State<Home>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.menu),
+                        onSelected: (value) async {
+                          switch (value) {
+                            case 'my_location':
+                              try {
+                                await getPositionAndPushToServer(false);
+                                await getDataAndMoveToLastPosition();
+                              } catch (_) {}
+                              break;
+                            case 'refresh':
+                              await getDataAndMoveToLastPosition();
+                              break;
+                            case 'load_trace':
+                              await openFilePickerAndReadTrace();
+                              break;
+                            case 'save_trace':
+                              await saveTraceAsGpx(context);
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          if (!kIsWeb)
+                            PopupMenuItem(
+                              value: 'my_location',
+                              enabled: !App().sportMode,
+                              child: ListTile(
+                                leading: Icon(Icons.my_location),
+                                title: Text(tr(context, "my_location")),
+                              ),
+                            ),
+                          PopupMenuItem(
+                            value: 'refresh',
+                            child: ListTile(
+                              leading: Icon(Icons.refresh),
+                              title: Text(tr(context, "refresh")),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'load_trace',
+                            child: ListTile(
+                              leading: Icon(Icons.timeline),
+                              title: Text(tr(context, "load_trace")),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'save_trace',
+                            child: ListTile(
+                              leading: Icon(Icons.edit_road),
+                              title: Text(tr(context, "save_trace")),
+                            ),
+                          ),
+                        ],
+                      ),
                       if (App().hasToken)
                         FutureBuilder<List<Position>>(
                           future: positions,
@@ -488,31 +543,6 @@ class HomeState extends State<Home>
                             );
                           },
                         ),
-                      if (!kIsWeb)
-                        IconButton(
-                          icon: const Icon(Icons.my_location),
-                          onPressed: App().sportMode
-                              ? null
-                              : () async {
-                                  try {
-                                    await getPositionAndPushToServer(false);
-                                    await getDataAndMoveToLastPosition();
-                                  } catch (_) {}
-                                },
-                        ),
-
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: () async {
-                          await getDataAndMoveToLastPosition();
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.timeline),
-                        onPressed: () async {
-                          await openFilePickerAndReadTrace();
-                        },
-                      ),
                       if (App().hasToken)
                         UsersDropdown(
                           users: users,
@@ -672,6 +702,53 @@ class HomeState extends State<Home>
         setState(() {
           trace = null;
         });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(e);
+      }
+    }
+  }
+
+  Future<void> saveTraceAsGpx(BuildContext context) async {
+    try {
+      final itms = await positions;
+      itms.sort((a, b) => b.time.compareTo(a.time));
+      var points = itms
+          .where(
+            (e) => e.time.isAfter(
+              DateTime.now().subtract(const Duration(hours: 6)),
+            ),
+          )
+          .where((e) => e.source == gpsSource)
+          .map((e) => LatLng(e.latitude, e.longitude))
+          .toList();
+
+      if (points.isEmpty) return;
+
+      var geoXml = GeoXml();
+      geoXml.trks = [
+        Trk(
+          trksegs: [
+            Trkseg(
+              trkpts: points
+                  .map((e) => Wpt(lat: e.latitude, lon: e.longitude))
+                  .toList(),
+            ),
+          ],
+        ),
+      ];
+
+      String gpxString = geoXml.toGpxString(pretty: false);
+      Uint8List bytes = Uint8List.fromList(utf8.encode(gpxString));
+      if (context.mounted) {
+        await FilePicker.saveFile(
+          dialogTitle: tr(context, "save_trace"),
+          fileName: 'trace.gpx',
+          type: FileType.custom,
+          allowedExtensions: ["gpx"],
+          bytes: bytes,
+        );
       }
     } catch (e) {
       if (kDebugMode) {
