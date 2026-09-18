@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    crud_create, crud_delete, crud_delete_all, crud_update, crud_use, errors::ServerError,
+    crud_create, crud_delete, crud_delete_all, crud_update, crud_use,
     schema::users,
 };
 
@@ -48,19 +48,19 @@ struct ReturnedUser {
     switching_mode: bool,
 }
 
-#[get("")]
 pub async fn read_all(
-    pool: web::Data<DbPool>,
-    cfg: web::Data<crate::app::AppConfig>,
-) -> Result<HttpResponse, ServerError> {
-    let mut conn = pool.get()?;
-    let users = web::block(move || {
+    State(state): State<AppState>,
+) -> Result<Response, ServerError> {
+    let pool = state.pool.clone();
+    let users = tokio::task::spawn_blocking(move || -> Result<Vec<User>, ServerError> {
+        let mut conn = pool.get()?;
         use crate::schema::users::dsl::*;
-        users.order(name.asc()).load::<User>(&mut conn)
+        let res = users.order(name.asc()).load::<User>(&mut conn)?;
+        Ok(res)
     })
     .await??;
 
-    let sport_mode_toggle_users = cfg.sport_mode_toggle_users.lock().await;
+    let sport_mode_toggle_users = state.config.sport_mode_toggle_users.lock().await;
     let returned_users: Vec<ReturnedUser> = users
         .into_iter()
         .map(|user| {
@@ -72,28 +72,28 @@ pub async fn read_all(
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(returned_users))
+    Ok((StatusCode::OK, Json(returned_users)).into_response())
 }
 
-#[get("/{oid}")]
 pub async fn read(
-    pool: web::Data<DbPool>,
-    oid: web::Path<i32>,
-    cfg: web::Data<crate::app::AppConfig>,
-) -> Result<HttpResponse, ServerError> {
-    let mut conn = pool.get()?;
-    let user = web::block(move || {
+    State(state): State<AppState>,
+    Path(oid): Path<i32>,
+) -> Result<Response, ServerError> {
+    let pool = state.pool.clone();
+    let user = tokio::task::spawn_blocking(move || -> Result<User, ServerError> {
+        let mut conn = pool.get()?;
         use crate::schema::users::dsl::*;
-        users.filter(id.eq(*oid)).first::<User>(&mut conn)
+        let res = users.filter(id.eq(oid)).first::<User>(&mut conn)?;
+        Ok(res)
     })
     .await??;
-    let sport_mode_toggle_users = cfg.sport_mode_toggle_users.lock().await;
+    let sport_mode_toggle_users = state.config.sport_mode_toggle_users.lock().await;
     let uid = user.id;
     let returned_user = ReturnedUser {
         user,
         switching_mode: sport_mode_toggle_users.contains(&uid),
     };
-    Ok(HttpResponse::Ok().json(returned_user))
+    Ok((StatusCode::OK, Json(returned_user)).into_response())
 }
 
 crud_update!(User, users,);

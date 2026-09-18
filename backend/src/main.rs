@@ -4,16 +4,15 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use std::env;
+use std::sync::Arc;
 
-use actix_web::HttpServer;
-use actix_web::web::Data;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use positions_server::PositionsServer;
 use tokio::{spawn, try_join};
 
-use crate::app::AppConfig;
+use crate::app::{create_app, AppConfig};
 
 mod app;
 mod db_options;
@@ -31,7 +30,7 @@ mod utils;
 
 use log::info;
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     if env::var("RUST_LOG").is_err() {
         // TODO: Audit that the environment access only happens in single-threaded code.
@@ -67,18 +66,17 @@ async fn main() -> std::io::Result<()> {
         }),
         env::var("API_KEY").ok(),
     );
-    // Data should be constructed outside the HttpServer::new closure if shared, potentially mutable state is desired...
-    let app_config = Data::new(app_config);
+    let app_config = Arc::new(app_config);
     let bind = "0.0.0.0:8080";
 
     // Positions server
     let (positions_server, server_tx) = PositionsServer::new();
     let positions_server = spawn(positions_server.run());
 
-    // Start HTTP server
-    let http_server = HttpServer::new(move || create_app!(pool, &app_config, &server_tx))
-        .bind(&bind)?
-        .run();
+    let app = create_app(&pool, &app_config, &server_tx);
+
+    let listener = tokio::net::TcpListener::bind(bind).await?;
+    let http_server = axum::serve(listener, app);
 
     try_join!(http_server, async move { positions_server.await.unwrap() })?;
 

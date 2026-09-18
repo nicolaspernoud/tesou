@@ -1,26 +1,29 @@
-use actix_web::{HttpResponse, Responder, Result, get, web};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use base64ct::{Base64, Encoding};
 use chacha20poly1305::aead::Generate;
 use chacha20poly1305::{
-    ChaCha20Poly1305, Nonce,
     aead::{Aead, KeyInit},
+    ChaCha20Poly1305, Nonce,
 };
 use log::debug;
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{app::AppConfig, errors::ServerError};
+use crate::{app::AppState, errors::ServerError};
 
 #[derive(serde::Deserialize)]
 pub struct Info {
     pub user_id: u16,
 }
 
-#[get("")]
 pub async fn get(
-    cfg: web::Data<AppConfig>,
-    info: web::Query<Info>,
-) -> Result<impl Responder, ServerError> {
+    State(state): State<AppState>,
+    Query(info): Query<Info>,
+) -> Result<Response, ServerError> {
     // Get the current time
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?;
     debug!("Creating token, time = {:?}", time);
@@ -29,7 +32,7 @@ pub async fn get(
     data.extend_from_slice(&info.user_id.to_le_bytes());
 
     // Get the main token
-    let token = &cfg.bearer_token;
+    let token = &state.config.bearer_token;
 
     // Derive it as a key
     let mut hasher = Sha256::new();
@@ -50,23 +53,21 @@ pub async fn get(
     debug!("Creating token, base64 token = {:?}", encoded);
 
     // Respond
-    Ok(HttpResponse::Ok().body(encoded))
+    Ok((StatusCode::OK, encoded).into_response())
 }
 
 #[cfg(test)]
 pub async fn token_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
-    app_config: &actix_web::web::Data<AppConfig>,
+    app_config: &std::sync::Arc<crate::app::AppConfig>,
     position_server_handle: &crate::positions_server::PositionsServerHandle,
 ) {
+    use crate::app::create_app;
     use crate::do_test;
-    use actix_web::{
-        http::{Method, StatusCode},
-        test,
-    };
+    use axum::http::Method;
+    use tower::ServiceExt;
 
-    let mut app =
-        test::init_service(crate::create_app!(pool, app_config, position_server_handle)).await;
+    let app = create_app(pool, app_config, position_server_handle);
 
     // Get a token
     let share_token = do_test!(
@@ -81,61 +82,72 @@ pub async fn token_test(
     debug!("share_token = {}", share_token);
 
     // Try to use the share token with a get method (must pass)
-    let req = test::TestRequest::get()
-        .insert_header(("Authorization", format!("Bearer {share_token}")))
+    let req = http::Request::builder()
+        .method(Method::GET)
         .uri("/api/users")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 200);
+        .header("Authorization", format!("Bearer {share_token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
 
     // Try to use the share token to get the positions for the user it was created for (must pass)
-    let req = test::TestRequest::get()
-        .insert_header(("Authorization", format!("Bearer {share_token}")))
+    let req = http::Request::builder()
+        .method(Method::GET)
         .uri("/api/positions?user_id=1")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 200);
+        .header("Authorization", format!("Bearer {share_token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
 
     // Try to use the share token to get positions without an user id (must fail)
-    let req = test::TestRequest::get()
-        .insert_header(("Authorization", format!("Bearer {share_token}")))
+    let req = http::Request::builder()
+        .method(Method::GET)
         .uri("/api/positions")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 404);
+        .header("Authorization", format!("Bearer {share_token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     // Try to use the share token to get the positions for another user that the one it was created for (must fail)
-    let req = test::TestRequest::get()
-        .insert_header(("Authorization", format!("Bearer {share_token}")))
+    let req = http::Request::builder()
+        .method(Method::GET)
         .uri("/api/positions?user_id=2")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 403);
+        .header("Authorization", format!("Bearer {share_token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
     // Try to use a random share token with a get method (must fail)
-    let req = test::TestRequest::get()
-        .insert_header((
-            "Authorization",
-            "Bearer 9HwHATU2Ifi7BFvZgbwTwQKsG5DlEIOqlAFRxX+steugCbDp",
-        ))
+    let req = http::Request::builder()
+        .method(Method::GET)
         .uri("/api/users")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 403);
+        .header("Authorization", "Bearer 9HwHATU2Ifi7BFvZgbwTwQKsG5DlEIOqlAFRxX+steugCbDp")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
     // Try to use the share token with a method altering the data (must fail)
-    let req = test::TestRequest::delete()
-        .insert_header(("Authorization", format!("Bearer {share_token}")))
+    let req = http::Request::builder()
+        .method(Method::DELETE)
         .uri("/api/users")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 403);
+        .header("Authorization", format!("Bearer {share_token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
     // Try to use the share token with a get a share token (must fail)
-    let req = test::TestRequest::get()
-        .insert_header(("Authorization", format!("Bearer {share_token}")))
+    let req = http::Request::builder()
+        .method(Method::GET)
         .uri("/api/token?user_id=1")
-        .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), 403);
+        .header("Authorization", format!("Bearer {share_token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }

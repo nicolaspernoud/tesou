@@ -1,4 +1,4 @@
-use crate::{app::AppConfig, create_app, positions_server::PositionsServerHandle};
+use crate::{app::{create_app, AppConfig}, positions_server::PositionsServerHandle};
 
 impl std::fmt::Display for crate::models::position::Position {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -19,27 +19,26 @@ impl std::fmt::Display for crate::models::position::Position {
 
 pub async fn position_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
-    app_config: &actix_web::web::Data<AppConfig>,
+    app_config: &std::sync::Arc<AppConfig>,
     position_server_handle: &PositionsServerHandle,
 ) {
     use crate::{do_test, do_test_extract_id};
-    use actix_web::{
-        http::{Method, StatusCode},
-        test,
-    };
+    use axum::http::{Method, StatusCode};
+    use tower::ServiceExt;
 
-    let mut app = test::init_service(create_app!(pool, app_config, position_server_handle)).await;
+    let app = create_app(pool, app_config, position_server_handle);
 
     // Check that using the wrong token gives an unauthorized error
-    let req = test::TestRequest::with_uri("/api/positions")
+    let req = http::Request::builder()
         .method(Method::GET)
-        .insert_header(("Authorization", "Bearer 0102"))
-        .to_request();
-    use actix_web::dev::Service;
-    let resp = app.call(req).await.unwrap();
-    assert_eq!(resp.status(), 403);
-    let body = test::read_body(resp).await;
-    let body = std::str::from_utf8(&body).unwrap().to_string();
+        .uri("/api/positions")
+        .header("Authorization", "Bearer 0102")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let body_bytes = http_body_util::BodyExt::collect(resp.into_body()).await.unwrap().to_bytes();
+    let body = std::str::from_utf8(&body_bytes).unwrap().to_string();
     assert_eq!(body, "Wrong token!");
 
     // Create a position with a non existing user

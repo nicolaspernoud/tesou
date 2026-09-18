@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use diesel::{SqliteConnection, connection::SimpleConnection};
+use diesel::{r2d2::ConnectionManager, SqliteConnection, connection::SimpleConnection};
+
+pub type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 #[derive(Debug)]
 pub struct ConnectionOptions {

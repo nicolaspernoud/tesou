@@ -1,16 +1,22 @@
-use crate::app::AppConfig;
+use crate::app::AppState;
 use crate::errors::ServerError;
-use actix_web::{HttpResponse, post, web};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 
-#[post("/toggle/{user_id}")]
 pub async fn toggle_sport_mode(
-    cfg: web::Data<AppConfig>,
-    user_id: web::Path<i32>,
-) -> Result<HttpResponse, ServerError> {
-    let mut sport_mode_toggle_users = cfg.sport_mode_toggle_users.lock().await;
-    let uid = user_id.into_inner();
-    if !sport_mode_toggle_users.contains(&uid) {
-        sport_mode_toggle_users.push(uid);
+    State(state): State<AppState>,
+    Path(user_id): Path<i32>,
+) -> Result<Response, ServerError> {
+    let mut sport_mode_toggle_users = state.config.sport_mode_toggle_users.lock().await;
+    if !sport_mode_toggle_users.contains(&user_id) {
+        sport_mode_toggle_users.push(user_id);
     }
-    Ok(HttpResponse::Ok().body(format!("User {} added to sport mode toggle list", uid)))
+    Ok((
+        StatusCode::OK,
+        format!("User {} added to sport mode toggle list", user_id),
+    )
+        .into_response())
 }

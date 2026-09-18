@@ -1,9 +1,8 @@
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use std::time::SystemTimeError;
-
-use actix_web::HttpResponse;
-use actix_web::error::BlockingError;
-use actix_web::error::PayloadError;
-use actix_web::error::ResponseError;
 
 #[derive(Debug)]
 pub enum ServerError {
@@ -32,18 +31,18 @@ impl std::fmt::Display for ServerError {
 
 impl std::error::Error for ServerError {}
 
-impl ResponseError for ServerError {
-    fn error_response(&self) -> HttpResponse {
+impl IntoResponse for ServerError {
+    fn into_response(self) -> Response {
         match self {
-            ServerError::R2D2 => HttpResponse::InternalServerError().body("R2D2 error"),
-            ServerError::Blocking => HttpResponse::InternalServerError().body("Blocking error"),
-            ServerError::Diesel => HttpResponse::InternalServerError().body("Diesel error"),
-            ServerError::DieselNotFound => HttpResponse::NotFound().body("Item not found"),
-            ServerError::DieselDatabaseError(m) => HttpResponse::NotFound().body(m.clone()),
-            ServerError::Image(m) => HttpResponse::InternalServerError().body(m.clone()),
+            ServerError::R2D2 => (StatusCode::INTERNAL_SERVER_ERROR, "R2D2 error").into_response(),
+            ServerError::Blocking => (StatusCode::INTERNAL_SERVER_ERROR, "Blocking error").into_response(),
+            ServerError::Diesel => (StatusCode::INTERNAL_SERVER_ERROR, "Diesel error").into_response(),
+            ServerError::DieselNotFound => (StatusCode::NOT_FOUND, "Item not found").into_response(),
+            ServerError::DieselDatabaseError(m) => (StatusCode::NOT_FOUND, m).into_response(),
+            ServerError::Image(m) => (StatusCode::INTERNAL_SERVER_ERROR, m).into_response(),
             ServerError::Other(m) => {
                 log::info!("{}", m);
-                HttpResponse::NotFound().body(m.clone())
+                (StatusCode::NOT_FOUND, m).into_response()
             }
         }
     }
@@ -67,20 +66,14 @@ impl From<diesel::result::Error> for ServerError {
     }
 }
 
-impl From<BlockingError> for ServerError {
-    fn from(_: BlockingError) -> ServerError {
+impl From<tokio::task::JoinError> for ServerError {
+    fn from(_: tokio::task::JoinError) -> ServerError {
         ServerError::Blocking
     }
 }
 
 impl From<std::io::Error> for ServerError {
     fn from(err: std::io::Error) -> ServerError {
-        ServerError::Image(err.to_string())
-    }
-}
-
-impl From<PayloadError> for ServerError {
-    fn from(err: PayloadError) -> ServerError {
         ServerError::Image(err.to_string())
     }
 }

@@ -1,4 +1,4 @@
-use actix_web::web::Data;
+use std::sync::Arc;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use tokio::spawn;
 
@@ -10,13 +10,14 @@ use crate::{
     positions_server::PositionsServer,
     token::token_test,
 };
-#[actix_rt::test]
+
+#[tokio::test]
 async fn test_models() {
     use diesel::SqliteConnection;
     use diesel::r2d2::{self, ConnectionManager};
     // TODO: Audit that the environment access only happens in single-threaded code.
     unsafe { std::env::set_var("RUST_LOG", "debug") };
-    env_logger::init();
+    let _ = env_logger::builder().is_test(true).try_init();
 
     // set up database connection pool
     let manager = ConnectionManager::<SqliteConnection>::new("db/test_db.sqlite");
@@ -31,7 +32,7 @@ async fn test_models() {
 
     // Set up authorization token
     let app_config = AppConfig::new("0101".to_string(), None);
-    let app_data = Data::new(app_config);
+    let app_data = Arc::new(app_config);
     let (positions_server, server_tx) = PositionsServer::new();
     let positions_server = spawn(positions_server.run());
 

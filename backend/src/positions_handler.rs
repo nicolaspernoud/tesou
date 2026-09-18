@@ -1,25 +1,22 @@
 use std::{
     env,
-    pin::pin,
     sync::LazyLock,
     time::{Duration, Instant},
 };
 
-use actix_web::Error;
-use actix_web::{HttpRequest, HttpResponse, web};
-use actix_web::{
-    Responder,
-    error::{self},
+use axum::{
+    extract::{
+        ws::{WebSocketUpgrade},
+        RawQuery, State,
+    },
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
-use actix_ws::AggregatedMessage;
-use futures_util::{
-    StreamExt as _,
-    future::{Either, select},
-};
-use tokio::{sync::mpsc, task::spawn_local, time::interval};
+use futures_util::{SinkExt as _, StreamExt as _};
+use tokio::{sync::mpsc, time::interval};
 
 use crate::{
-    app::query_string_to_hashmap,
+    app::{check_share_token, query_string_to_hashmap, AppState},
     positions_server::{PositionsServerHandle, UserId},
 };
 
@@ -39,138 +36,135 @@ pub static CLIENT_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| *HEARTBEAT_INTE
 // Echo text & binary messages received from the client, respond to ping messages, and monitor connection health to detect network issues and free up resources.
 pub async fn positions_ws(
     positions_server: PositionsServerHandle,
-    mut session: actix_ws::Session,
-    msg_stream: actix_ws::MessageStream,
+    socket: axum::extract::ws::WebSocket,
     user_id: UserId,
 ) {
     log::info!("new endpoint connection");
 
     let mut last_heartbeat = Instant::now();
     let mut interval = interval(*HEARTBEAT_INTERVAL);
+    interval.reset();
 
     let (conn_tx, mut conn_rx) = mpsc::unbounded_channel();
 
-    // unwrap: positions server is not dropped before the HTTP server
     let conn_id = positions_server.connect(conn_tx, user_id).await;
 
-    let msg_stream = msg_stream
-        .max_frame_size(128 * 1024)
-        .aggregate_continuations()
-        .max_continuation_size(2 * 1024 * 1024);
+    let (mut ws_tx, mut ws_rx) = socket.split();
 
-    let mut msg_stream = pin!(msg_stream);
-
-    let close_reason = loop {
-        // most of the futures we process need to be stack-pinned to work with select()
-        let tick = pin!(interval.tick());
-        let msg_rx = pin!(conn_rx.recv());
-
-        // TODO: nested select is pretty gross for readability on the match
-        let messages = pin!(select(msg_stream.next(), msg_rx));
-
-        match select(messages, tick).await {
+    loop {
+        tokio::select! {
             // commands & messages received from client
-            Either::Left((Either::Left((Some(Ok(msg)), _)), _)) => {
-                log::debug!("msg: {msg:?}");
-
+            msg = ws_rx.next() => {
                 match msg {
-                    AggregatedMessage::Ping(bytes) => {
+                    Some(Ok(axum::extract::ws::Message::Ping(bytes))) => {
                         last_heartbeat = Instant::now();
-                        session.pong(&bytes).await.unwrap();
+                        let _ = ws_tx.send(axum::extract::ws::Message::Pong(bytes)).await;
                     }
-
-                    AggregatedMessage::Pong(_) => {
+                    Some(Ok(axum::extract::ws::Message::Pong(_))) => {
                         last_heartbeat = Instant::now();
                     }
-
-                    AggregatedMessage::Text(text) => {
-                        process_text_msg(&positions_server, &mut session, &text, user_id).await;
+                    Some(Ok(axum::extract::ws::Message::Text(text))) => {
+                        process_text_msg(&positions_server, &text, user_id).await;
                     }
-
-                    AggregatedMessage::Binary(_bin) => {
+                    Some(Ok(axum::extract::ws::Message::Binary(_))) => {
                         log::warn!("unexpected binary message");
                     }
-
-                    AggregatedMessage::Close(reason) => break reason,
+                    Some(Ok(axum::extract::ws::Message::Close(_))) => {
+                        break;
+                    }
+                    Some(Err(err)) => {
+                        log::error!("{}", err);
+                        break;
+                    }
+                    None => {
+                        break;
+                    }
                 }
             }
 
-            // client WebSocket stream error
-            Either::Left((Either::Left((Some(Err(err)), _)), _)) => {
-                log::error!("{}", err);
-                break None;
-            }
-
-            // client WebSocket stream ended
-            Either::Left((Either::Left((None, _)), _)) => break None,
-
             // positions messages received
-            Either::Left((Either::Right((Some(positions_msg), _)), _)) => {
-                session.text(positions_msg).await.unwrap();
+            positions_msg = conn_rx.recv() => {
+                match positions_msg {
+                    Some(msg) => {
+                        if ws_tx.send(axum::extract::ws::Message::Text(msg.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => {
+                        unreachable!(
+                            "all connection message senders were dropped; positions server may have panicked"
+                        );
+                    }
+                }
             }
-
-            // all connection's message senders were dropped
-            Either::Left((Either::Right((None, _)), _)) => unreachable!(
-                "all connection message senders were dropped; positions server may have panicked"
-            ),
 
             // heartbeat internal tick
-            Either::Right((_inst, _)) => {
-                // if no heartbeat ping/pong received recently, close the connection
+            _ = interval.tick() => {
                 if Instant::now().duration_since(last_heartbeat) > *CLIENT_TIMEOUT {
                     log::info!(
                         "client has not sent heartbeat in over {:?}; disconnecting",
                         *CLIENT_TIMEOUT
                     );
-                    break None;
+                    break;
                 }
 
-                // send heartbeat ping
-                let _ = session.ping(b"").await;
+                let _ = ws_tx.send(axum::extract::ws::Message::Ping(Vec::new().into())).await;
             }
-        };
-    };
+        }
+    }
 
     positions_server.disconnect(conn_id);
-
-    // attempt to close connection gracefully
-    let _ = session.close(close_reason).await;
 }
 
 async fn process_text_msg(
     positions_server: &PositionsServerHandle,
-    _session: &mut actix_ws::Session,
     text: &str,
     user_id: UserId,
 ) {
     positions_server.send_message(user_id, text).await
 }
 
-// handshake and start WebSocket handler with heartbeats
 pub async fn positions_ws_handler(
-    req: HttpRequest,
-    stream: web::Payload,
-    chat_server: web::Data<PositionsServerHandle>,
-) -> Result<HttpResponse, Error> {
-    let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
+    ws: WebSocketUpgrade,
+    RawQuery(raw_query): RawQuery,
+    State(state): State<AppState>,
+) -> Response {
+    let query_str = raw_query.unwrap_or_default();
+    let params = query_string_to_hashmap(&query_str);
 
-    // get user id from request
-    let user_id = query_string_to_hashmap(req.query_string())
-        .get("user_id")
-        .ok_or(error::ErrorBadRequest("no user_id must in query"))?
-        .parse::<u16>()
-        .map_err(|_| error::ErrorBadRequest("the user_id must be a number"))?;
-    // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(positions_ws(
-        (**chat_server).clone(),
-        session,
-        msg_stream,
-        user_id,
-    ));
+    let user_id = match params.get("user_id") {
+        Some(uid_str) => match uid_str.parse::<u16>() {
+            Ok(uid) => uid,
+            Err(_) => {
+                return (StatusCode::BAD_REQUEST, "the user_id must be a number").into_response();
+            }
+        },
+        None => {
+            return (StatusCode::BAD_REQUEST, "no user_id must in query").into_response();
+        }
+    };
 
-    Ok(res)
+    let query_token = match params.get("token") {
+        Some(t) => t,
+        None => {
+            return (StatusCode::UNAUTHORIZED, "could not parse query").into_response();
+        }
+    };
+
+    let query_token = urlencoding::decode(query_token).unwrap_or_default();
+    let ref_token = &state.config.bearer_token;
+
+    if query_token != *ref_token {
+        let query_user_id = params.get("user_id");
+        let (ok, reason) = check_share_token(&query_token, ref_token, query_user_id);
+        if !ok {
+            return (StatusCode::UNAUTHORIZED, reason).into_response();
+        }
+    }
+
+    ws.on_upgrade(move |socket| positions_ws(state.positions_server, socket, user_id))
 }
 
-pub async fn count(chat_server: web::Data<PositionsServerHandle>) -> impl Responder {
-    chat_server.count().await.to_string()
+pub async fn count(State(state): State<AppState>) -> String {
+    state.positions_server.count().await.to_string()
 }

@@ -1,12 +1,9 @@
-use actix_web::HttpRequest;
+use axum::extract::Query;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::AppConfig,
     crud_delete, crud_delete_all, crud_read, crud_update, crud_use,
-    errors::ServerError,
     models::user::User,
-    positions_server::PositionsServerHandle,
     schema::positions::{self, dsl::*},
 };
 
@@ -124,106 +121,101 @@ macro_rules! delete_old_positions {
     };
 }
 
-#[post("")]
 pub async fn create(
-    pool: web::Data<DbPool>,
-    o: web::Json<Vec<NewPosition>>,
-    cfg: web::Data<AppConfig>,
-    ws_data: web::Data<PositionsServerHandle>,
-) -> Result<HttpResponse, ServerError> {
-    let mut o = o.into_inner();
+    State(state): State<AppState>,
+    Json(mut o): Json<Vec<NewPosition>>,
+) -> Result<Response, ServerError> {
     if o.is_empty() {
-        return Ok(HttpResponse::Ok().finish());
+        return Ok((StatusCode::OK, "").into_response());
     }
     let uid = o[0].user_id;
-    let mut sport_mode_toggle_users = cfg.sport_mode_toggle_users.lock().await;
+    let mut sport_mode_toggle_users = state.config.sport_mode_toggle_users.lock().await;
     if sport_mode_toggle_users.contains(&uid) {
         if let Some(last_pos) = o.last_mut() {
             last_pos.sport_mode = !last_pos.sport_mode;
         }
         sport_mode_toggle_users.retain(|&x| x != uid);
     }
-    let mut hm = cfg.user_last_update.lock().await;
+    let mut hm = state.config.user_last_update.lock().await;
     // Filter the positions : remove those that have a timestamp too close to the last update or too close together
     let o = filter_positions(o, hm.get(&uid).copied(), Some(uid));
     if o.is_empty() {
-        return Ok(HttpResponse::Conflict()
-            .body("there is already a recorded position in the same second"));
+        return Ok((
+            StatusCode::CONFLICT,
+            "there is already a recorded position in the same second",
+        )
+            .into_response());
     }
-    let mut conn = pool.get()?;
-    match web::block(move || {
+    let pool = state.pool.clone();
+    let res = tokio::task::spawn_blocking(move || -> Result<Position, diesel::result::Error> {
+        let mut conn = pool.get().map_err(|_| diesel::result::Error::NotFound)?;
         // Check that parent for our object exists
         crate::schema::users::dsl::users
             .find(o[0].user_id)
             .first::<User>(&mut conn)?;
         delete_old_positions!(conn);
         diesel::insert_into(positions)
-            .values(&(*o))
+            .values(&o)
             .execute(&mut conn)?;
-        let o = positions
+        let res_pos = positions
             .filter(user_id.eq(uid))
             .order(time.desc())
             .first::<Position>(&mut conn)?;
-        Ok(o)
+        Ok(res_pos)
     })
-    .await?
-    {
+    .await?;
+
+    match res {
         Ok(created_o) => {
             update_last_timestamp!(hm, created_o);
-            ws_data
+            state
+                .positions_server
                 .send_message(
                     created_o.user_id.try_into()?,
                     serde_json::to_string(&created_o)?,
                 )
                 .await;
-            Ok(HttpResponse::Created().json(created_o))
+            Ok((StatusCode::CREATED, Json(created_o)).into_response())
         }
         Err(e) => match e {
             diesel::result::Error::DatabaseError(_, _) => {
-                Ok(HttpResponse::Conflict().body(format!("{}", e)))
+                Ok((StatusCode::CONFLICT, format!("{}", e)).into_response())
             }
-            diesel::result::Error::NotFound => Ok(HttpResponse::NotFound().body("Item not found")),
-            _ => Ok(HttpResponse::InternalServerError().body("")),
+            diesel::result::Error::NotFound => {
+                Ok((StatusCode::NOT_FOUND, "Item not found").into_response())
+            }
+            _ => Ok((StatusCode::INTERNAL_SERVER_ERROR, "").into_response()),
         },
     }
 }
 
 crud_read!(Position, positions);
 
-#[derive(Deserialize)]
-pub struct Params {
-    user_id: i32,
-}
-
-#[get("")]
 pub async fn read_filter(
-    req: HttpRequest,
-    pool: web::Data<DbPool>,
-) -> Result<HttpResponse, ServerError> {
-    let mut conn = pool.get()?;
-    let params = web::Query::<Params>::from_query(req.query_string());
-    let object = match params {
-        Ok(p) => {
-            web::block(move || {
-                positions
-                    .filter(user_id.eq(p.user_id))
-                    .order(id.asc())
-                    .load::<Position>(&mut conn)
-            })
-            .await?
-        }
-        Err(_) => {
-            /*let mut conn = pool.get()?;
-            web::block(move || positions.order(id.asc()).load::<Position>(&mut conn)).await?*/
-            let res = HttpResponse::NotFound().body("No user_id provided in query");
-            return Ok(res);
+    State(state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Response, ServerError> {
+    let user_id_param = match params.get("user_id").and_then(|v| v.parse::<i32>().ok()) {
+        Some(id_val) => id_val,
+        None => {
+            return Ok((StatusCode::NOT_FOUND, "No user_id provided in query").into_response());
         }
     };
-    if let Ok(object) = object {
-        Ok(HttpResponse::Ok().json(object))
-    } else {
-        let res = HttpResponse::NotFound().body("No objects found");
+    let pool = state.pool.clone();
+    let object = tokio::task::spawn_blocking(move || -> Result<Vec<Position>, ServerError> {
+        let mut conn = pool.get()?;
+        let res = positions
+            .filter(user_id.eq(user_id_param))
+            .order(id.asc())
+            .load::<Position>(&mut conn)?;
         Ok(res)
+    })
+    .await?;
+
+    if let Ok(object) = object {
+        Ok((StatusCode::OK, Json(object)).into_response())
+    } else {
+        Ok((StatusCode::NOT_FOUND, "No objects found").into_response())
     }
 }
 
@@ -267,16 +259,14 @@ pub struct OpenCellIdResponse {
     pub message: String,
 }
 
-#[post("/cid/{uid}")]
 pub async fn create_from_cid(
-    pool: web::Data<DbPool>,
-    uid: web::Path<i32>,
-    cell_id: web::Json<CellId>,
-    cfg: web::Data<AppConfig>,
-) -> Result<HttpResponse, ServerError> {
-    let mut hm = cfg.user_last_update.lock().await;
+    State(state): State<AppState>,
+    Path(uid): Path<i32>,
+    Json(cell_id): Json<CellId>,
+) -> Result<Response, ServerError> {
+    let mut hm = state.config.user_last_update.lock().await;
     let mut o = NewPosition {
-        user_id: *uid,
+        user_id: uid,
         latitude: 0.0,
         longitude: 0.0,
         source: format!("Cell Id ({})", cell_id.network_type),
@@ -287,44 +277,51 @@ pub async fn create_from_cid(
     if let Some(last_update) = hm.get(&o.user_id)
         && (o.time - last_update).abs() < MINIMUM_TIME_GAP
     {
-        return Ok(HttpResponse::Conflict()
-            .body("there is already a recorded position in the same second"));
+        return Ok((
+            StatusCode::CONFLICT,
+            "there is already a recorded position in the same second",
+        )
+            .into_response());
     }
     if cell_id.lat != -1 {
         o.latitude = (cell_id.lat / 1296000) as f64;
         o.longitude = (cell_id.long / 2592000) as f64;
-    } else if let Some(api_key) = &cfg.open_cell_id_api_key {
+    } else if let Some(api_key) = &state.config.open_cell_id_api_key {
         // Get the cell location from open Cell Id database
         let ocid_resp = get_resp(&cell_id, api_key).await?;
         // Create position from those informations
         o.latitude = ocid_resp.lat;
         o.longitude = ocid_resp.lon;
     };
-    let mut conn = pool.get()?;
-    match web::block(move || {
+    let pool = state.pool.clone();
+    let res = tokio::task::spawn_blocking(move || -> Result<Position, diesel::result::Error> {
+        let mut conn = pool.get().map_err(|_| diesel::result::Error::NotFound)?;
         // Check that parent for our object exists
         crate::schema::users::dsl::users
             .find(o.user_id)
             .first::<User>(&mut conn)?;
         delete_old_positions!(conn);
         diesel::insert_into(positions)
-            .values(o)
+            .values(&o)
             .execute(&mut conn)?;
-        let o = positions.order(id.desc()).first::<Position>(&mut conn)?;
-        Ok(o)
+        let res_pos = positions.order(id.desc()).first::<Position>(&mut conn)?;
+        Ok(res_pos)
     })
-    .await?
-    {
+    .await?;
+
+    match res {
         Ok(created_o) => {
             update_last_timestamp!(hm, created_o);
-            Ok(HttpResponse::Created().json(created_o))
+            Ok((StatusCode::CREATED, Json(created_o)).into_response())
         }
         Err(e) => match e {
             diesel::result::Error::DatabaseError(_, _) => {
-                Ok(HttpResponse::Conflict().body(format!("{}", e)))
+                Ok((StatusCode::CONFLICT, format!("{}", e)).into_response())
             }
-            diesel::result::Error::NotFound => Ok(HttpResponse::NotFound().body("Item not found")),
-            _ => Ok(HttpResponse::InternalServerError().body("")),
+            diesel::result::Error::NotFound => {
+                Ok((StatusCode::NOT_FOUND, "Item not found").into_response())
+            }
+            _ => Ok((StatusCode::INTERNAL_SERVER_ERROR, "").into_response()),
         },
     }
 }

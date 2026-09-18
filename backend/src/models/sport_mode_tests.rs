@@ -1,17 +1,14 @@
-use crate::{app::AppConfig, create_app, positions_server::PositionsServerHandle};
+use crate::{app::{create_app, AppConfig}, positions_server::PositionsServerHandle};
 
 pub async fn toggle_sport_mode_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
-    app_config: &actix_web::web::Data<AppConfig>,
+    app_config: &std::sync::Arc<AppConfig>,
     position_server_handle: &PositionsServerHandle,
 ) {
     use crate::{do_test, do_test_extract_id};
-    use actix_web::{
-        http::{Method, StatusCode},
-        test,
-    };
+    use axum::http::{Method, StatusCode};
 
-    let mut app = test::init_service(create_app!(pool, app_config, position_server_handle)).await;
+    let app = create_app(pool, app_config, position_server_handle);
 
     // Delete all the users
     do_test!(

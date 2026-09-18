@@ -1,6 +1,7 @@
 #[macro_export]
 macro_rules! do_test {
     ($app:expr, $method:expr, $uri:expr, $payload:expr, $expected_status_code:expr, $body_expect_to_start_with:expr) => {{
+        use tower::ServiceExt;
         let serialized: String;
         let ptype = $crate::tester::type_of($payload);
         println!("Payload type: {}", ptype);
@@ -10,16 +11,17 @@ macro_rules! do_test {
             serialized = serde_json::to_string($payload).expect("Could not serialized payload");
         }
         println!("Payload: {}", $payload);
-        let req = test::TestRequest::with_uri($uri)
+        let req = http::Request::builder()
             .method($method)
-            .set_payload(serialized)
-            .insert_header(("content-type", "application/json"))
-            .insert_header(("Authorization", "Bearer 0101"))
-            .to_request();
-        let resp = test::call_service(&mut $app, req).await;
+            .uri($uri)
+            .header("content-type", "application/json")
+            .header("Authorization", "Bearer 0101")
+            .body(axum::body::Body::from(serialized))
+            .unwrap();
+        let resp = $app.clone().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), $expected_status_code);
-        let body = test::read_body(resp).await;
-        let body = std::str::from_utf8(&body).unwrap().to_string();
+        let body_bytes = http_body_util::BodyExt::collect(resp.into_body()).await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&body_bytes).unwrap().to_string();
         println!("Body: {}", body);
         assert!(body.starts_with(&$body_expect_to_start_with.to_string()));
         body

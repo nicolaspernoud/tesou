@@ -1,24 +1,24 @@
-use crate::{app::AppConfig, create_app, positions_server::PositionsServerHandle};
+use crate::{app::{create_app, AppConfig}, positions_server::PositionsServerHandle};
 
 pub async fn user_test(
     pool: &r2d2::Pool<diesel::r2d2::ConnectionManager<diesel::SqliteConnection>>,
-    app_config: &actix_web::web::Data<AppConfig>,
+    app_config: &std::sync::Arc<AppConfig>,
     position_server_handle: &PositionsServerHandle,
 ) {
     use crate::{do_test, do_test_extract_id};
-    use actix_web::{
-        http::{Method, StatusCode},
-        test,
-    };
+    use axum::http::{Method, StatusCode};
+    use tower::ServiceExt;
 
-    let mut app = test::init_service(create_app!(pool, app_config, position_server_handle)).await;
+    let app = create_app(pool, app_config, position_server_handle);
 
     // Delete all the users
-    let req = test::TestRequest::delete()
-        .insert_header(("Authorization", "Bearer 0101"))
+    let req = http::Request::builder()
+        .method(Method::DELETE)
         .uri("/api/users")
-        .to_request();
-    test::call_service(&app, req).await;
+        .header("Authorization", "Bearer 0101")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let _ = app.clone().oneshot(req).await.unwrap();
 
     // Create a user
     let id = do_test_extract_id!(
@@ -87,11 +87,13 @@ pub async fn user_test(
     );
 
     // Delete all the users
-    let req = test::TestRequest::delete()
-        .insert_header(("Authorization", "Bearer 0101"))
+    let req = http::Request::builder()
+        .method(Method::DELETE)
         .uri("/api/users")
-        .to_request();
-    test::call_service(&app, req).await;
+        .header("Authorization", "Bearer 0101")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let _ = app.clone().oneshot(req).await.unwrap();
 
     // Create two users and get them all
     let id1 = do_test_extract_id!(
