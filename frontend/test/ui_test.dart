@@ -25,6 +25,7 @@ Future<void> main() async {
           usersCrud: userCrud,
           foregroundTaskCommand: _startForegroundTask,
           audioHandler: null,
+          tileUrlTemplate: "",
         ),
         localizationsDelegates: const [MyLocalizationsDelegate()],
       ),

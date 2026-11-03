@@ -37,6 +37,7 @@ class Home extends StatefulWidget {
   final TesouAudioHandler? audioHandler;
 
   final SharedPosition? sharedPosition;
+  final String? tileUrlTemplate;
 
   const Home({
     super.key,
@@ -46,6 +47,7 @@ class Home extends StatefulWidget {
     required this.foregroundTaskCommand,
     this.audioHandler,
     this.sharedPosition,
+    this.tileUrlTemplate,
   });
 
   @override
@@ -276,7 +278,7 @@ class HomeState extends State<Home>
                                 children: [
                                   TileLayer(
                                     urlTemplate:
-                                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                        widget.tileUrlTemplate ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                                     userAgentPackageName: "fr.ninico.tesou",
                                   ),
                                   RichAttributionWidget(
@@ -393,7 +395,7 @@ class HomeState extends State<Home>
                                       ),
                                       child: SpeedGauge(
                                         speed: lastRunSpeed(itms.sublist(0, 4)),
-                                        maxSpeed: 20,
+                                        maxSpeed: lastRunSpeed(itms) * 2,
                                         size: 50,
                                       ),
                                     ),

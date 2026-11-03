@@ -37,9 +37,9 @@ void main() {
       expect(i1, i2);
     });
 
-    test(
+    testWidgets(
         'createPositionFromStream handles push exceptions gracefully and returns local position',
-        () async {
+        (WidgetTester tester) async {
       // Under FLUTTER_TEST, pushing to server throws a MockAPI 404 Exception.
       // This test ensures we catch that exception and still return the successfully parsed Position.
       final pos = await createPositionFromStream("45.75:4.85:80");
